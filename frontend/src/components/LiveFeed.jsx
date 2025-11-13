@@ -18,14 +18,21 @@ const LiveFeed = () => {
 
   useEffect(() => {
     if (CURRENT_PLAN === "plan_c") {
+      // --- Fix for ESLint warning ---
+      const videoElement = videoRef.current;
+      const canvasElement = canvasRef.current;
+      const ws = new WebSocket(WEBSOCKET_URL);
+      wsRef.current = ws;
+      // ---------------------------------
+
       const setupWebcam = async () => {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
             video: true,
             audio: false,
           });
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
+          if (videoElement) {
+            videoElement.srcObject = stream;
           }
         } catch (err) {
           console.error("Error: Could not access webcam.", err);
@@ -35,65 +42,60 @@ const LiveFeed = () => {
 
       setupWebcam();
 
-      wsRef.current = new WebSocket(WEBSOCKET_URL);
-
-      // --- THIS IS THE KEY CHANGE ---
-
-      wsRef.current.onopen = () => {
+      ws.onopen = () => {
         console.log("Connected to video processing WebSocket");
         setServerMessage("Connection established. Starting stream...");
 
-        // NOW that we are connected, START the send loop.
+        // --- FIX: Start the loop AFTER connection is open ---
         intervalRef.current = setInterval(() => {
-          // The readyState check is still good practice, in case it disconnects
           if (
-            wsRef.current &&
-            wsRef.current.readyState === WebSocket.OPEN &&
-            videoRef.current &&
-            canvasRef.current &&
-            videoRef.current.readyState === 4 // 4 = HAVE_ENOUGH_DATA
+            ws.readyState === WebSocket.OPEN &&
+            videoElement &&
+            canvasElement &&
+            videoElement.readyState === 4 // 4 = HAVE_ENOUGH_DATA
           ) {
-            const context = canvasRef.current.getContext("2d");
-
-            canvasRef.current.width = videoRef.current.videoWidth;
-            canvasRef.current.height = videoRef.current.videoHeight;
-
-            context.drawImage(videoRef.current, 0, 0);
-
-            const dataUrl = canvasRef.current.toDataURL("image/jpeg", 0.8);
-
-            wsRef.current.send(dataUrl);
+            const context = canvasElement.getContext("2d");
+            canvasElement.width = videoElement.videoWidth;
+            canvasElement.height = videoElement.videoHeight;
+            context.drawImage(videoElement, 0, 0);
+            const dataUrl = canvasElement.toDataURL("image/jpeg", 0.8);
+            ws.send(dataUrl);
           }
         }, 1000 / 15); // Send ~15 FPS
       };
 
-      wsRef.current.onmessage = (event) => {
-        // We got a frame!
-        setProcessedFrame(event.data);
+      ws.onmessage = (event) => {
+        // Check if the message is a Data URL (our image)
+        if (event.data.startsWith("data:image/jpeg")) {
+          setProcessedFrame(event.data);
+        } else {
+          // It's an error message from the backend!
+          console.error("Backend Error:", event.data);
+          setServerMessage(event.data);
+        }
       };
 
-      wsRef.current.onerror = (error) => {
+      ws.onerror = (error) => {
         console.error("WebSocket Error:", error);
         setServerMessage("WebSocket connection error.");
       };
 
-      wsRef.current.onclose = () => {
+      ws.onclose = () => {
         console.log("Disconnected from video processing WebSocket");
         setServerMessage("Connection closed.");
       };
 
-      // Cleanup function
+      // --- FIX: Use local variables in cleanup ---
       return () => {
-        clearInterval(intervalRef.current); // Clear the interval
-        if (wsRef.current) wsRef.current.close();
-        if (videoRef.current && videoRef.current.srcObject) {
-          videoRef.current.srcObject
-            .getTracks()
-            .forEach((track) => track.stop());
+        console.log("Running cleanup...");
+        clearInterval(intervalRef.current);
+        if (ws) ws.close();
+        if (videoElement && videoElement.srcObject) {
+          videoElement.srcObject.getTracks().forEach((track) => track.stop());
         }
       };
     }
-  }, []); // Empty array ensures this runs only once
+  }, []); // The empty array is correct
 
   // ... (Your render/return logic is the same) ...
   return (

@@ -10,15 +10,23 @@ from fastapi.responses import StreamingResponse
 # --- 1. NEW: IMPORT YOLO ---
 from ultralytics import YOLO
 
-# --- 2. NEW: LOAD YOUR MODEL ---
-# This loads the model into memory *once* when the app starts.
-# It uses the file path we just created.
-try:
-    model = YOLO("models/best.pt")
-    print("YOLO model 'models/best.pt' loaded successfully.")
-except Exception as e:
-    print(f"Error loading YOLO model: {e}")
-    model = None
+# --- 1. THE FIX: "LAZY LOADING" ---
+# Load the model inside the function that needs it, not globally.
+# We set it to None here.
+model = None
+
+def get_model():
+    """This function loads the model or returns it if already loaded."""
+    global model
+    if model is None:
+        try:
+            print("LAZY LOADING: Loading YOLO model 'models/best.pt'...")
+            model = YOLO("models/best.pt")
+            print("LAZY LOADING: YOLO model loaded successfully.")
+        except Exception as e:
+            print(f"Error loading YOLO model: {e}")
+            return None
+    return model
 
 # 1. --- APP INITIALIZATION & CORS ---
 # -------------------------------------
@@ -183,48 +191,51 @@ def frame_to_data_url(frame):
     # Format as a Data URL
     return f"data:image/jpeg;base64,{base64_data}"
 
-# --- WebSocket for Plan C ---
 
+# --- WebSocket for Plan C (With Fixes) ---
 @app.websocket("/ws/process_video")
 async def ws_process_video(websocket: WebSocket):
     await websocket.accept()
     print("CLIENT: Connected to video processing WebSocket.")
     
-    # Check if the model failed to load
-    if model is None:
+    # --- 2. THE FIX: Load the model on first call ---
+    local_model = get_model()
+    
+    if local_model is None:
         await websocket.send_text("Error: YOLO model is not loaded on server.")
         await websocket.close()
         return
     
-    try:
-        while True:
+    while True:
+        try:
             data_url = await websocket.receive_text()
             frame = data_url_to_frame(data_url)
             
             if frame is not None:
                 
-                # --- 3. NEW: RUN YOUR REAL YOLO MODEL ---
-                # This runs the model on the frame
-                results = model(frame, verbose=False) # verbose=False stops it from printing to console
-                
-                # 'results[0].plot()' is a helper that
-                # *automatically draws all boxes and labels*
-                # onto the frame for you. It's much easier
-                # than drawing them manually with cv2!
-                processed_frame = results[0].plot()
-                # --- End of YOLO processing ---
+                # --- 3. THE OTHER FIX: BGR to RGB ---
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                results = local_model(frame_rgb, verbose=False) 
+                processed_frame = results[0].plot() 
                 
                 processed_data_url = frame_to_data_url(processed_frame)
                 
                 if processed_data_url:
                     await websocket.send_text(processed_data_url)
                     
-            await asyncio.sleep(0.01) # Yield control
+            await asyncio.sleep(0.01)
             
-    except WebSocketDisconnect:
-        print("CLIENT: Disconnected from video processing WebSocket.")
-    except Exception as e:
-        print(f"Error in video processing WebSocket: {e}")
+        except WebSocketDisconnect:
+            print("CLIENT: Disconnected from video processing WebSocket.")
+            break # Exit the loop
+            
+        except Exception as e:
+            # --- 4. THE OTHER FIX: Robust Error Handling ---
+            error_message = f"Error processing frame: {e}"
+            print(f"BACKEND: {error_message}")
+            await websocket.send_text(error_message) # Send error to React
+            await asyncio.sleep(0.1)
+            continue # Continue the loop
 
 # 5. --- RUN THE APP ---
 # ----------------------
