@@ -4,3 +4,7 @@ frontend/build
 
 # Python
 backend/venv
+
+.DS_Store
+
+.vscode

@@ -1,9 +1,24 @@
 import uvicorn
 import cv2
 import asyncio
+import base64  # We'll need this to decode/encode
+import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+
+# --- 1. NEW: IMPORT YOLO ---
+from ultralytics import YOLO
+
+# --- 2. NEW: LOAD YOUR MODEL ---
+# This loads the model into memory *once* when the app starts.
+# It uses the file path we just created.
+try:
+    model = YOLO("models/best.pt")
+    print("YOLO model 'models/best.pt' loaded successfully.")
+except Exception as e:
+    print(f"Error loading YOLO model: {e}")
+    model = None
 
 # 1. --- APP INITIALIZATION & CORS ---
 # -------------------------------------
@@ -139,6 +154,77 @@ def video_feed():
     return StreamingResponse(video_generator(), 
                              media_type="multipart/x-mixed-replace; boundary=frame")
 
+# Helper Functions for local YOLO
+
+def data_url_to_frame(data_url: str):
+    """Converts a Base64 Data URL to an OpenCV frame (numpy array)"""
+    try:
+        # Split the header from the data
+        _, encoded_data = data_url.split(',', 1)
+        # Decode the Base64 data
+        decoded_data = base64.b64decode(encoded_data)
+        # Convert to a numpy array
+        np_arr = np.frombuffer(decoded_data, np.uint8)
+        # Decode the numpy array into an OpenCV image
+        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        return frame
+    except Exception as e:
+        print(f"Error decoding Data URL: {e}")
+        return None
+    
+def frame_to_data_url(frame):
+    """Converts an OpenCV frame (numpy array) to a Base64 Data URL"""
+    # Encode the frame as a JPEG
+    (flag, encodedImage) = cv2.imencode(".jpg", frame)
+    if not flag:
+        return None
+    # Convert to Base64
+    base64_data = base64.b64encode(encodedImage).decode('utf-8')
+    # Format as a Data URL
+    return f"data:image/jpeg;base64,{base64_data}"
+
+# --- WebSocket for Plan C ---
+
+@app.websocket("/ws/process_video")
+async def ws_process_video(websocket: WebSocket):
+    await websocket.accept()
+    print("CLIENT: Connected to video processing WebSocket.")
+    
+    # Check if the model failed to load
+    if model is None:
+        await websocket.send_text("Error: YOLO model is not loaded on server.")
+        await websocket.close()
+        return
+    
+    try:
+        while True:
+            data_url = await websocket.receive_text()
+            frame = data_url_to_frame(data_url)
+            
+            if frame is not None:
+                
+                # --- 3. NEW: RUN YOUR REAL YOLO MODEL ---
+                # This runs the model on the frame
+                results = model(frame, verbose=False) # verbose=False stops it from printing to console
+                
+                # 'results[0].plot()' is a helper that
+                # *automatically draws all boxes and labels*
+                # onto the frame for you. It's much easier
+                # than drawing them manually with cv2!
+                processed_frame = results[0].plot()
+                # --- End of YOLO processing ---
+                
+                processed_data_url = frame_to_data_url(processed_frame)
+                
+                if processed_data_url:
+                    await websocket.send_text(processed_data_url)
+                    
+            await asyncio.sleep(0.01) # Yield control
+            
+    except WebSocketDisconnect:
+        print("CLIENT: Disconnected from video processing WebSocket.")
+    except Exception as e:
+        print(f"Error in video processing WebSocket: {e}")
 
 # 5. --- RUN THE APP ---
 # ----------------------
