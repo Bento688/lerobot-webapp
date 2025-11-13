@@ -48,6 +48,7 @@ const LiveFeed = () => {
 
         // --- FIX: Start the loop AFTER connection is open ---
         intervalRef.current = setInterval(() => {
+          // --- FIX: Check if video is ACTUALLY ready ---
           if (
             ws.readyState === WebSocket.OPEN &&
             videoElement &&
@@ -57,7 +58,7 @@ const LiveFeed = () => {
             const context = canvasElement.getContext("2d");
             canvasElement.width = videoElement.videoWidth;
             canvasElement.height = videoElement.videoHeight;
-            context.drawImage(videoElement, 0, 0);
+            context.drawImage(videoElement, 0, 0); // This is no longer a black frame
             const dataUrl = canvasElement.toDataURL("image/jpeg", 0.8);
             ws.send(dataUrl);
           }
@@ -65,7 +66,7 @@ const LiveFeed = () => {
       };
 
       ws.onmessage = (event) => {
-        // Check if the message is a Data URL (our image)
+        // --- FIX: Check for error messages ---
         if (event.data.startsWith("data:image/jpeg")) {
           setProcessedFrame(event.data);
         } else {
