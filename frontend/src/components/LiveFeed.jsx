@@ -97,7 +97,7 @@ const LiveFeed = () => {
 
   // ... (The rest of your return/render is the same)
   return (
-    <div className="relative bg-dark-surface border border-secondary rounded-lg overflow-hidden aspect-video">
+    <div className="w-full relative bg-dark-surface border border-secondary rounded-lg overflow-hidden aspect-video">
       {CURRENT_PLAN === "plan_c" && (
         <>
           {processedFrame ? (
