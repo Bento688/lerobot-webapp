@@ -1,10 +1,8 @@
-// In frontend/src/LiveFeed.jsx
 import React, { useEffect, useRef, useState } from "react";
 
 const WEBSOCKET_URL = "ws://localhost:3000/ws/process_video";
 const STREAM_URL = "http://localhost:3000/video_feed";
 
-// ... (keep your CURRENT_PLAN setting)
 const CURRENT_PLAN = "plan_c";
 
 const LiveFeed = () => {
@@ -14,16 +12,15 @@ const LiveFeed = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const wsRef = useRef(null);
-  const intervalRef = useRef(null); // Ref to hold the interval ID
+  const intervalRef = useRef(null);
 
   useEffect(() => {
     if (CURRENT_PLAN === "plan_c") {
-      // --- Fix for ESLint warning ---
+      // Store .current in local variables for the cleanup function
       const videoElement = videoRef.current;
       const canvasElement = canvasRef.current;
       const ws = new WebSocket(WEBSOCKET_URL);
       wsRef.current = ws;
-      // ---------------------------------
 
       const setupWebcam = async () => {
         try {
@@ -46,9 +43,9 @@ const LiveFeed = () => {
         console.log("Connected to video processing WebSocket");
         setServerMessage("Connection established. Starting stream...");
 
-        // --- FIX: Start the loop AFTER connection is open ---
+        // Start the loop ONLY after the connection is open
         intervalRef.current = setInterval(() => {
-          // --- FIX: Check if video is ACTUALLY ready ---
+          // Check if WebSocket is open AND video has data
           if (
             ws.readyState === WebSocket.OPEN &&
             videoElement &&
@@ -58,7 +55,8 @@ const LiveFeed = () => {
             const context = canvasElement.getContext("2d");
             canvasElement.width = videoElement.videoWidth;
             canvasElement.height = videoElement.videoHeight;
-            context.drawImage(videoElement, 0, 0); // This is no longer a black frame
+            context.drawImage(videoElement, 0, 0); // This will no longer be a black frame
+
             const dataUrl = canvasElement.toDataURL("image/jpeg", 0.8);
             ws.send(dataUrl);
           }
@@ -66,11 +64,10 @@ const LiveFeed = () => {
       };
 
       ws.onmessage = (event) => {
-        // --- FIX: Check for error messages ---
+        // Check if the message is an image or an error from Python
         if (event.data.startsWith("data:image/jpeg")) {
           setProcessedFrame(event.data);
         } else {
-          // It's an error message from the backend!
           console.error("Backend Error:", event.data);
           setServerMessage(event.data);
         }
@@ -86,7 +83,7 @@ const LiveFeed = () => {
         setServerMessage("Connection closed.");
       };
 
-      // --- FIX: Use local variables in cleanup ---
+      // Use local variables in cleanup to avoid ESLint warning
       return () => {
         console.log("Running cleanup...");
         clearInterval(intervalRef.current);
@@ -96,9 +93,9 @@ const LiveFeed = () => {
         }
       };
     }
-  }, []); // The empty array is correct
+  }, []); // Empty array ensures this runs only once
 
-  // ... (Your render/return logic is the same) ...
+  // ... (The rest of your return/render is the same)
   return (
     <div className="relative bg-dark-surface border border-secondary rounded-lg overflow-hidden aspect-video">
       {CURRENT_PLAN === "plan_c" && (
@@ -111,7 +108,7 @@ const LiveFeed = () => {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-dark-text-secondary">
-              {serverMessage} {/* Use the state for more detail */}
+              {serverMessage}
             </div>
           )}
 
@@ -127,7 +124,13 @@ const LiveFeed = () => {
         </>
       )}
 
-      {/* ... (Your Plan B logic) ... */}
+      {CURRENT_PLAN === "plan_b" && (
+        <img
+          src={STREAM_URL}
+          alt="Robot live feed"
+          className="w-full h-full object-cover"
+        />
+      )}
     </div>
   );
 };

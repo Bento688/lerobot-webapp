@@ -32,14 +32,15 @@ def get_model():
     if model is None:
         try:
             print("LAZY LOADING: Loading YOLO model 'models/best.pt'...")
-            model = YOLO("models/best.pt") #
+            model = YOLO("models/best.pt")
             print("LAZY LOADING: YOLO model loaded successfully.")
         except Exception as e:
             print(f"Error loading YOLO model: {e}")
             return None
     return model
 
-# ... (Keep your /ws chat, /video_feed, and helper functions) ...
+# (Keep your other endpoints: /ws, /video_feed, and helper functions)
+# ... (all the other functions go here, I'm omitting for brevity) ...
 async def run_robot_command(command: str):
     print(f"ROBOT: Received command '{command}'")
     clean_prompt = f"robot-ready-prompt-for: {command}"
@@ -117,7 +118,7 @@ async def ws_process_video(websocket: WebSocket):
     await websocket.accept()
     print("CLIENT: Connected to video processing WebSocket.")
     
-    # --- FIX 1 (continued): Load the model on first call ---
+    # --- FIX 1: Load the model on first call ---
     local_model = get_model()
     
     if local_model is None:
@@ -128,15 +129,17 @@ async def ws_process_video(websocket: WebSocket):
     while True:
         try:
             data_url = await websocket.receive_text()
-            frame = data_url_to_frame(data_url)
+            frame = data_url_to_frame(data_url) # This is BGR
             
             if frame is not None:
                 
-                # --- FIX 2: CONVERT BGR to RGB ---
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                # --- DEBUG: SAVE WHAT THE ROBOT SEES ---
+                # Save this frame to disk so you can open it and look at the quality
+                # cv2.imwrite("debug_view.jpg", frame) 
+                # ---------------------------------------
                 
                 # Run model on the correct RGB frame
-                results = local_model(frame_rgb, verbose=False) #
+                results = local_model(frame, verbose=False, conf=0.8)
                 
                 # .plot() draws on the frame and converts it BACK to BGR
                 processed_frame = results[0].plot() 
@@ -163,6 +166,5 @@ async def ws_process_video(websocket: WebSocket):
 # --- RUN THE APP ---
 if __name__ == "__main__":
     print("Starting FastAPI server on http://127.0.0.1:3000")
-    # We remove the "python main.py" method and run uvicorn this way
     # This ensures the server starts *before* the model is loaded.
     uvicorn.run("main:app", host="127.0.0.1", port=3000, reload=True)
