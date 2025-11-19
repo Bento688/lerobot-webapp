@@ -43,8 +43,13 @@ const LiveFeed = () => {
         console.log("Connected to video processing WebSocket");
         setServerMessage("Connection established. Starting stream...");
 
-        // Start the loop ONLY after the connection is open
-        intervalRef.current = setInterval(() => {
+        // Configuration for throttling
+        const FPS = 15;
+        const INTERVAL = 1000 / FPS;
+        let lastFrameTime = 0;
+
+        // 1. Consolidated function to capture and send a frame
+        const captureAndSendFrame = () => {
           // Check if WebSocket is open AND video has data
           if (
             ws.readyState === WebSocket.OPEN &&
@@ -55,12 +60,33 @@ const LiveFeed = () => {
             const context = canvasElement.getContext("2d");
             canvasElement.width = videoElement.videoWidth;
             canvasElement.height = videoElement.videoHeight;
-            context.drawImage(videoElement, 0, 0); // This will no longer be a black frame
+            context.drawImage(videoElement, 0, 0);
 
             const dataUrl = canvasElement.toDataURL("image/jpeg", 0.8);
             ws.send(dataUrl);
           }
-        }, 1000 / 15); // Send ~15 FPS
+        };
+
+        // 2. Modern API: Use requestVideoFrameCallback (Preferred)
+        if (videoElement && videoElement.requestVideoFrameCallback) {
+          const processFrame = (now) => {
+            if (now - lastFrameTime >= INTERVAL) {
+              captureAndSendFrame();
+              lastFrameTime = now;
+            }
+
+            // Recursively request the next frame as long as the WebSocket is open
+            if (ws.readyState === WebSocket.OPEN) {
+              videoElement.requestVideoFrameCallback(processFrame);
+            }
+          };
+
+          // Start the first callback
+          videoElement.requestVideoFrameCallback(processFrame);
+        } else {
+          // 3. Fallback: Use setInterval (Older browser/API not available)
+          intervalRef.current = setInterval(captureAndSendFrame, INTERVAL); // Send ~15 FPS
+        }
       };
 
       ws.onmessage = (event) => {
@@ -95,7 +121,6 @@ const LiveFeed = () => {
     }
   }, []); // Empty array ensures this runs only once
 
-  // ... (The rest of your return/render is the same)
   return (
     <div className="w-full relative bg-dark-surface border border-secondary rounded-lg overflow-hidden aspect-video">
       {CURRENT_PLAN === "plan_c" && (
@@ -117,7 +142,7 @@ const LiveFeed = () => {
             autoPlay
             playsInline
             muted
-            style={{ display: "none" }}
+            className="absolute top-0 left-0 -z-10 w-64 h-64 opacity-100"
             onLoadedData={() => console.log("Webcam data loaded")}
           />
           <canvas ref={canvasRef} style={{ display: "none" }} />
