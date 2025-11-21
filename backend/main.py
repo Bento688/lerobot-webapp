@@ -3,10 +3,13 @@ import cv2
 import asyncio
 import base64
 import numpy as np
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import requests
+import json
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from ultralytics import YOLO
+from pydantic import BaseModel
 
 # --- APP INITIALIZATION & CORS ---
 app = FastAPI()
@@ -21,6 +24,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- DATA MODELS ---
+class ChatRequest(BaseModel):
+    prompt: str
 
 # --- FIX 1: "LAZY LOADING" ---
 # Load the model inside the function, not globally.
@@ -39,8 +46,8 @@ def get_model():
             return None
     return model
 
-# (Keep your other endpoints: /ws, /video_feed, and helper functions)
-# ... (all the other functions go here, I'm omitting for brevity) ...
+
+# --- (Keep your other endpoints: /ws, /video_feed, and helper functions) ---
 async def run_robot_command(command: str):
     print(f"ROBOT: Received command '{command}'")
     clean_prompt = f"robot-ready-prompt-for: {command}"
@@ -49,25 +56,12 @@ async def run_robot_command(command: str):
     print(f"ROBOT: {response_message}")
     return response_message
 
+
+# --- Miscellaneous endpoints and websockets (ga kepake skrg) ---
+
 @app.get("/")
 def read_root():
     return {"message": "Robot Backend is Live!"}
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    print("CLIENT: Connected to WebSocket.")
-    try:
-        while True:
-            command = await websocket.receive_text()
-            print(f"CLIENT: Sent command '{command}'")
-            await websocket.send_text(f"Processing: {command}...")
-            robot_response = await run_robot_command(command)
-            await websocket.send_text(robot_response)
-    except WebSocketDisconnect:
-        print("CLIENT: Disconnected from WebSocket.")
-    except Exception as e:
-        print(f"Error in WebSocket: {e}")
         
 async def video_generator():
     cap = cv2.VideoCapture(0) 
@@ -93,6 +87,40 @@ def video_feed():
     return StreamingResponse(video_generator(), 
                              media_type="multipart/x-mixed-replace; boundary=frame")
 
+
+# --- 0LLAMA Chat Endpoint ---
+@app.post("/api/chat")
+def chat_with_ollama(request: ChatRequest):
+    '''
+        Receives a prompt from React, sends it to local Ollama, and returns the response
+    '''
+    ollama_url = "http://localhost:11434/api/chat"
+    
+    payload = {
+        "model": "qwen2.5:0.5b",
+        "messages": [{"role": "user", "content": request.prompt}],
+        "stream": False
+    }
+    
+    try:
+        response = requests.post(ollama_url, json=payload)
+        response.raise_for_status()
+        
+        response_data = response.json()
+        ai_reply = response_data["message"]["content"]
+        
+        return {"response": ai_reply}
+    
+    except requests.exceptions.ConnectionError:
+        # This happens if Ollama is not running
+        raise HTTPException(status_code=503, detail="Ollama is not running. Please open the Ollama app.")
+    except Exception as e:
+        print(f"Error chatting with Ollama: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+        
+
+# --- WebSocket helper functions ---
+
 def data_url_to_frame(data_url: str):
     try:
         _, encoded_data = data_url.split(',', 1)
@@ -112,7 +140,25 @@ def frame_to_data_url(frame):
     return f"data:image/jpeg;base64,{base64_data}"
 
 
-# --- WebSocket for Plan C (With All Fixes) ---
+# --- WebSockets ---
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    print("CLIENT: Connected to WebSocket.")
+    try:
+        while True:
+            command = await websocket.receive_text()
+            print(f"CLIENT: Sent command '{command}'")
+            await websocket.send_text(f"Processing: {command}...")
+            robot_response = await run_robot_command(command)
+            await websocket.send_text(robot_response)
+    except WebSocketDisconnect:
+        print("CLIENT: Disconnected from WebSocket.")
+    except Exception as e:
+        print(f"Error in WebSocket: {e}")
+
+# Websocket for plan C
 @app.websocket("/ws/process_video")
 async def ws_process_video(websocket: WebSocket):
     await websocket.accept()
@@ -162,6 +208,7 @@ async def ws_process_video(websocket: WebSocket):
             await websocket.send_text(error_message) # Send error to React
             await asyncio.sleep(0.1)
             continue # Continue the loop
+
 
 # --- RUN THE APP ---
 if __name__ == "__main__":
