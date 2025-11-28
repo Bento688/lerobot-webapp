@@ -18,7 +18,7 @@ const LiveChat = () => {
   }, [messages]);
 
   return (
-    <div className="h-100% bg-zinc-800 rounded-xl shadow-lg md:w-1/3 flex flex-col">
+    <div className="h-full max-h-[500px] bg-zinc-800 rounded-xl shadow-lg md:w-1/3 flex flex-col">
       <ChatHeader />
 
       {/* Chat Messages Area */}

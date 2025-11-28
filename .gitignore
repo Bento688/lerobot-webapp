@@ -1,6 +1,7 @@
 # Node.js
 frontend/node_modules
 frontend/build
+backend/node_modules/
 
 # Python
 backend/venv/
@@ -16,3 +17,8 @@ backend/__pycache__/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Environment variables (never upload secrets)
+.env
+frontend/.env
+backend/.env

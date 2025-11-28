@@ -122,7 +122,7 @@ const LiveFeed = () => {
   }, []); // Empty array ensures this runs only once
 
   return (
-    <div className="w-full relative bg-dark-surface border border-secondary rounded-lg overflow-hidden aspect-video">
+    <div className="w-full relative rounded-2xl border border-zinc-600 bg-zinc-800/40 backdrop-blur-sm shadow-[0_15px_50px_rgba(0,0,0,0.6)] overflow-hidden aspect-video">
       {CURRENT_PLAN === "plan_c" && (
         <>
           {processedFrame ? (
