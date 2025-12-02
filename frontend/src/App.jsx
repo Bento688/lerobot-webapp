@@ -13,16 +13,13 @@ const App = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-zinc-700">
-
       {/* NAVBAR */}
       <NavBar setActivePanel={setActivePanel} />
 
       {/* MAIN CONTENT AREA */}
       <div className="w-full max-w-7xl flex flex-1 justify-center items-center px-6">
-
         {/* ACTIVATE ANIMATION WHEN SWITCHING PANELS */}
         <AnimatePresence mode="wait">
-          
           {activePanel === "live" && (
             <motion.div
               key="live"
@@ -30,7 +27,7 @@ const App = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.25 }}
-              className="w-full flex flex-col md:flex-row gap-10"
+              className="w-full flex flex-col md:flex-row items-stretch gap-10"
             >
               <LiveFeed />
               <LiveChat />
@@ -62,9 +59,7 @@ const App = () => {
               <p>About Page Coming Soon...</p>
             </motion.div>
           )}
-
         </AnimatePresence>
-        
       </div>
 
       {/* FOOTER */}

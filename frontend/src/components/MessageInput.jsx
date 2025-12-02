@@ -29,16 +29,18 @@ const MessageInput = () => {
         />
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || text === ""}
           className={`rounded-full p-2 flex items-center justify-center transition-all ${
-            isLoading
+            isLoading || text === ""
               ? "bg-zinc-700 cursor-not-allowed"
               : "bg-zinc-600 hover:bg-zinc-500"
           }`}
         >
           <Send
             size={18}
-            className={isLoading ? "text-zinc-500" : "text-white"}
+            className={
+              isLoading || text === "" ? "text-zinc-500" : "text-white"
+            }
           />
         </button>
       </form>

@@ -1,38 +1,67 @@
 import { create } from "zustand";
-import { axiosInstance } from "../lib/axios";
+
+const WS_URL =
+  import.meta.env.MODE === "development"
+    ? "ws://localhost:3000/ws"
+    : `ws://${window.location.host}/ws`;
 
 const useChatStore = create((set, get) => ({
   messages: [],
-  isLoading: false,
+  socket: null,
+  isLoading: true, // Connection status (for disabling input)
+  isThinking: false, // NEW: AI processing status (for the bubble)
 
-  // Action to add a message directly to the store
   addMessage: (role, content) => {
     set((state) => ({
       messages: [...state.messages, { role, content }],
     }));
   },
 
-  // Action to handle sending a message to the backend
-  sendMessage: async (text) => {
-    const { addMessage } = get();
-
-    // 1. Add the user's message immediately
-    addMessage("user", text);
+  connect: () => {
+    if (get().socket) return;
     set({ isLoading: true });
 
-    try {
-      // 2. Call FastAPI backend and get the message of the bot
-      const response = await axiosInstance.post("/chat", {
-        prompt: text,
-      });
+    const socket = new WebSocket(WS_URL);
 
-      // 3. Add the bot's message into the array
-      addMessage("bot", response.data.response);
-    } catch (error) {
-      console.error("Error sending message:", error);
-      addMessage("bot", "Error: Could not connect to the robot brain.");
-    } finally {
-      set({ isLoading: false });
+    socket.onopen = () => {
+      console.log("Chat Connected ✅");
+      set({ socket, isLoading: false });
+    };
+
+    socket.onmessage = (event) => {
+      // 1. We got a reply, so stop "thinking"
+      set({ isThinking: false });
+      // 2. Add the bot message
+      get().addMessage("bot", event.data);
+    };
+
+    socket.onclose = () => {
+      console.log("Chat Disconnected ❌");
+      set({ socket: null, isLoading: true, isThinking: false });
+    };
+
+    socket.onerror = (error) => {
+      console.error("Socket Error:", error);
+      set({ isLoading: true, isThinking: false });
+    };
+  },
+
+  disconnect: () => {
+    const { socket } = get();
+    if (socket) socket.close();
+    set({ socket: null, isLoading: true });
+  },
+
+  sendMessage: (text) => {
+    const { socket, addMessage } = get();
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      addMessage("user", text);
+
+      // --- FIX: Set thinking to true immediately ---
+      set({ isThinking: true });
+
+      socket.send(text);
     }
   },
 }));
