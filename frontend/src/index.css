@@ -1,2 +1,47 @@
+/* 1. Import Tailwind and DaisyUI */
 @import "tailwindcss";
 @plugin "daisyui";
+
+/* 2. Define the Theme Variable */
+@theme {
+  /* This creates the 'font-poppins' utility class automatically */
+  --font-poppins: "Poppins", sans-serif;
+}
+
+/* 3. Load the Fonts (Using .ttf files) */
+
+/* Regular - Weight 400 */
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Medium - Weight 500 */
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* SemiBold - Weight 600 */
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Thin - Weight 100 (Optional, since you have the file) */
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-Thin.ttf") format("truetype");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}

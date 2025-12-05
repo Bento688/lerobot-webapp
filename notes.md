@@ -2,7 +2,7 @@ How to run the project
 
 ====== MacOS: ======
 
-- Create 2 terminals (1 for backend, 1 for frontend)
+- Create 3 terminals (1 for backend, 1 for frontend, 1 for ollama to serve)
 
 Backend:
 
@@ -18,6 +18,11 @@ Frontend:
 1. From project root, cd /frontend
 2. Install dependencies: npm i
 3. Run the dev server: npm run dev
+
+Ollama terminal:
+
+1. Make sure ollama is installed
+2. Serve ollama: ollama serve
 
 ====== Windows: ======
 
@@ -39,6 +44,11 @@ Frontend:
 1. From project root, cd frontend
 2. Install dependencies: npm i
 3. Run the dev server: npm run dev
+
+Ollama terminal:
+
+1. Make sure ollama is installed
+2. Serve ollama: ollama serve
 
 =====================
 

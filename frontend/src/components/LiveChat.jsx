@@ -18,6 +18,8 @@ const LiveChat = () => {
   }, [messages, isThinking]); // Scroll when thinking state changes too
 
   return (
+    // NOTE: Removed sizing/styling classes here as they should be in the parent (App.jsx)
+    // For now, keeping your sizing classes to make it work standalone:
     <div className="w-full h-full min-h-[500px] max-h-[500px] bg-zinc-800 rounded-xl shadow-lg md:w-1/3 flex flex-col border border-zinc-600 overflow-hidden">
       <ChatHeader />
 
@@ -29,28 +31,32 @@ const LiveChat = () => {
         )}
 
         {messages.map((msg, index) => (
+          // --- DAISYUI CHAT BUBBLE IMPLEMENTATION ---
           <div
             key={index}
-            className={`flex ${
-              msg.role === "user" ? "justify-end" : "justify-start"
+            // Determine if it's the user's message (chat-end) or the bot's message (chat-start)
+            className={`chat ${
+              msg.role === "user" ? "chat-end" : "chat-start"
             }`}
           >
             <div
-              className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
+              className={`chat-bubble max-w-[80%] ${
+                // Apply the primary color class for the user, and a neutral/secondary color for the bot
                 msg.role === "user"
-                  ? "bg-blue-600 text-white rounded-br-none"
-                  : "bg-zinc-700 text-gray-200 rounded-bl-none"
+                  ? "chat-bubble-info"
+                  : "chat-bubble-neutral text-gray-200"
               }`}
             >
               {msg.content}
             </div>
           </div>
+          // --- END DAISYUI CHAT BUBBLE IMPLEMENTATION ---
         ))}
 
-        {/* --- NEW: THINKING BUBBLE --- */}
+        {/* --- THINKING BUBBLE (Adapted to look like DaisyUI chat) --- */}
         {isThinking && (
-          <div className="flex justify-start animate-pulse">
-            <div className="bg-zinc-700/50 text-gray-400 rounded-2xl px-4 py-2 text-xs rounded-bl-none italic flex items-center gap-2">
+          <div className="chat chat-start">
+            <div className="chat-bubble chat-bubble-secondary bg-zinc-700/50 text-gray-400 italic flex items-center gap-2 max-w-[80%]">
               <span>Bot is thinking</span>
               <span className="flex gap-1">
                 <span className="w-1 h-1 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>

@@ -20,7 +20,7 @@ const NavBar = ({ setActivePanel }) => {
     const centeredY = item.top - container.top + item.height / 3.1;
 
     setBlob({
-      width: item.width * 1.15,   // perfect sizing ratio
+      width: item.width * 1.15, // perfect sizing ratio
       height: item.height * 1.35, // extra height for liquid look
       x: centeredX,
       y: centeredY,
@@ -39,8 +39,8 @@ const NavBar = ({ setActivePanel }) => {
 
   return (
     <div className="flex mx-auto justify-between w-full p-4 bg-zinc-800 border-b border-zinc-700 select-none relative items-center">
-      <h3 className="font-medium text-3xl font-mono text-gray-200">
-        🍅 TomaTVLA
+      <h3 className="font-medium text-3xl font-poppins text-gray-200">
+        🍅 TomatVLA
       </h3>
 
       <div
@@ -100,7 +100,7 @@ const NavBar = ({ setActivePanel }) => {
 const NavItem = ({ label, onHover, onLeave, onClick }) => (
   <span
     className="
-      relative z-10 cursor-pointer font-mono px-3 py-2 rounded-x4 
+      relative z-10 cursor-pointer font-poppins px-3 py-2 rounded-x4 
       text-lg text-gray-300 hover:text-white 
       transition-all duration-200 ease-out
       active:scale-95
