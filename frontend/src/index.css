@@ -45,3 +45,33 @@
   font-style: normal;
   font-display: swap;
 }
+
+/* 4. DAISYUI THEME CONFIGURATION (Tomato Theme) */
+/* We are overriding the 'dark' theme to use Tomato colors */
+:root {
+  --p: 10 80% 60%; /* Primary (Tomato) - OKLCH or HSL format recommended for v4, but hex works in config */
+  /* DaisyUI v4 automatically handles color mixing if you set base colors */
+}
+
+/* Explicitly setting the tomato color for the default theme.
+   You can add this block to customize the colors specifically.
+*/
+[data-theme="dark"] {
+  --p: 0.6 0.2 20; /* OKLCH approximation of Tomato #FF6347 */
+  /* Or if using hex variables isn't working in v4 direct CSS yet, 
+     we rely on the plugin defaults, but let's try the semantic approach first.
+     If you want strict control, standard DaisyUI approach is via config, 
+     but since we removed config, we use CSS variables.
+  */
+  color-scheme: dark;
+}
+
+/* ALTERNATIVE: Simpler CSS Variable override for Primary */
+:root {
+  /* Tomato Color #FF6347 converted to oklch */
+  --color-primary: oklch(65.5% 0.236 26.68);
+  /* Deep Dark Backgrounds */
+  --color-base-100: oklch(20% 0.02 260); /* ~Zinc 800 */
+  --color-base-200: oklch(17% 0.02 260); /* ~Zinc 900 */
+  --color-base-300: oklch(15% 0.02 260); /* ~Zinc 950 */
+}

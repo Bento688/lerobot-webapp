@@ -20,12 +20,12 @@ const LiveChat = () => {
   return (
     // NOTE: Removed sizing/styling classes here as they should be in the parent (App.jsx)
     // For now, keeping your sizing classes to make it work standalone:
-    <div className="w-full h-full min-h-[500px] max-h-[500px] bg-zinc-800 rounded-xl shadow-lg md:w-1/3 flex flex-col border border-zinc-600 overflow-hidden">
+    <div className="w-full h-full min-h-[500px] max-h-[500px] bg-zinc-800 rounded-xl shadow-lg md:w-1/3 flex flex-col border border-gray-800 overflow-hidden">
       <ChatHeader />
 
-      <div className="flex-1 overflow-y-auto bg-zinc-900/30 p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto bg-base-100 p-4 space-y-4">
         {messages.length === 0 && (
-          <div className="flex justify-center align-center text-zinc-500 text-sm mt-10">
+          <div className="flex justify-center align-center font-poppins text-zinc-500 text-sm mt-10">
             <p>Say hello to the robot! 👋</p>
           </div>
         )}
@@ -40,10 +40,10 @@ const LiveChat = () => {
             }`}
           >
             <div
-              className={`chat-bubble max-w-[80%] ${
+              className={`chat-bubble font-poppins max-w-[80%] ${
                 // Apply the primary color class for the user, and a neutral/secondary color for the bot
                 msg.role === "user"
-                  ? "chat-bubble-info"
+                  ? "chat-bubble-primary"
                   : "chat-bubble-neutral text-gray-200"
               }`}
             >
@@ -56,7 +56,7 @@ const LiveChat = () => {
         {/* --- THINKING BUBBLE (Adapted to look like DaisyUI chat) --- */}
         {isThinking && (
           <div className="chat chat-start">
-            <div className="chat-bubble chat-bubble-secondary bg-zinc-700/50 text-gray-400 italic flex items-center gap-2 max-w-[80%]">
+            <div className="chat-bubble chat-bubble-secondary font-poppins bg-zinc-700/50 text-gray-400 italic flex items-center gap-2 max-w-[80%]">
               <span>Bot is thinking</span>
               <span className="flex gap-1">
                 <span className="w-1 h-1 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>

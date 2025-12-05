@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Loader2 } from "lucide-react"; // Optional: for a nice spinner if you have lucide
 
 const WEBSOCKET_URL = "ws://localhost:3000/ws/process_video";
 const STREAM_URL = "http://localhost:3000/video_feed";
@@ -8,6 +9,9 @@ const CURRENT_PLAN = "plan_c";
 const LiveFeed = () => {
   const [processedFrame, setProcessedFrame] = useState(null);
   const [serverMessage, setServerMessage] = useState("Connecting to server...");
+
+  const [isStreamReady, setIsStreamReady] = useState(false);
+  const [permissionError, setPermissionError] = useState(false);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -22,22 +26,30 @@ const LiveFeed = () => {
       const ws = new WebSocket(WEBSOCKET_URL);
       wsRef.current = ws;
 
-      const setupWebcam = async () => {
+      let stream = null;
+
+      const startWebcam = async () => {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({
+          stream = await navigator.mediaDevices.getUserMedia({
             video: true,
             audio: false,
           });
           if (videoElement) {
             videoElement.srcObject = stream;
+            // We do NOT set isStreamReady(true) here.
+            // We wait for the video 'onLoadedData' event in the JSX.
           }
+          setPermissionError(false);
         } catch (err) {
           console.error("Error: Could not access webcam.", err);
-          setServerMessage("Error: Could not access webcam.");
+          setPermissionError(true);
+          setServerMessage(
+            "Error: Camera permission denied, please refresh the page and try again."
+          );
         }
       };
 
-      setupWebcam();
+      startWebcam();
 
       ws.onopen = () => {
         console.log("Connected to video processing WebSocket");
@@ -122,40 +134,95 @@ const LiveFeed = () => {
   }, []); // Empty array ensures this runs only once
 
   return (
-    <div className="w-full relative rounded-2xl border border-zinc-600 bg-zinc-800/40 backdrop-blur-sm shadow-[0_15px_50px_rgba(0,0,0,0.6)] overflow-hidden aspect-video">
-      {CURRENT_PLAN === "plan_c" && (
-        <>
-          {processedFrame ? (
-            <img
-              src={processedFrame}
-              alt="Processed feed"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-dark-text-secondary">
-              {serverMessage}
+    <div className="w-full relative rounded-2xl border border-base-300 bg-base-100 shadow-[0_15px_50px_rgba(0,0,0,0.6)] overflow-hidden aspect-video">
+      {/* 1. SKELETON LOADER (Shows while waiting for camera, hidden on error) */}
+      {!isStreamReady && !permissionError && (
+        <div className="absolute inset-0 z-20 flex flex-col gap-4 p-4 bg-base-100">
+          {/* Main block */}
+          <div className="skeleton h-full w-full rounded-xl bg-base-300 opacity-50"></div>
+
+          {/* Fake UI elements to look nice */}
+          <div className="absolute top-8 left-8 flex gap-3">
+            <div className="skeleton h-8 w-8 rounded-full bg-base-300 opacity-60"></div>
+            <div className="skeleton h-8 w-24 rounded-lg bg-base-300 opacity-60"></div>
+          </div>
+
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-base-content/40 font-poppins text-sm animate-pulse">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="w-12 h-12 text-primary animate-spin opacity-75" />
+              Starting Camera...
             </div>
-          )}
-
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="absolute top-0 left-0 -z-10 w-64 h-64 opacity-100"
-            onLoadedData={() => console.log("Webcam data loaded")}
-          />
-          <canvas ref={canvasRef} style={{ display: "none" }} />
-        </>
+          </div>
+        </div>
       )}
 
-      {CURRENT_PLAN === "plan_b" && (
-        <img
-          src={STREAM_URL}
-          alt="Robot live feed"
-          className="w-full h-full object-cover"
-        />
+      {/* 2. PERMISSION ERROR (Shows if camera denied) */}
+      {permissionError && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-base-100 p-6 text-center">
+          <div className="text-4xl mb-4">🚫</div>
+          <h3 className="text-error font-bold text-xl mb-2">
+            Camera Access Denied
+          </h3>
+          <p className="text-base-content/70 text-sm max-w-xs">
+            {serverMessage}
+          </p>
+        </div>
       )}
+
+      {/* 3. MAIN CONTENT (Fades in when stream is ready) */}
+      <div
+        className={`w-full h-full transition-opacity duration-700 ${
+          isStreamReady ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        {CURRENT_PLAN === "plan_c" && (
+          <>
+            {processedFrame ? (
+              /* Wrapper for the processed image and the overlay */
+              <div className="relative w-full h-full">
+                <img
+                  src={processedFrame}
+                  alt="Processed feed"
+                  className="w-full h-full object-cover rounded-xl"
+                />
+
+                {/* 🔴 Live Feed Indicator */}
+                <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 flex items-center gap-2 pointer-events-none">
+                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.6)]" />
+                  <span className="text-white text-xs font-poppins font-medium tracking-wide">
+                    Live Feed
+                  </span>
+                </div>
+              </div>
+            ) : (
+              // Loading state AFTER camera is ready but BEFORE first frame arrives
+              <div className="w-full h-full flex flex-col items-center justify-center text-base-content/50 gap-3">
+                {/* UPDATED: Swapped DaisyUI spinner for Lucide Loader2 
+                    - 'animate-spin' makes it rotate
+                    - 'text-primary' uses your tomato color
+                */}
+                <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                <span className="text-sm font-poppins">{serverMessage}</span>
+              </div>
+            )}
+
+            {/* HIDDEN VIDEO ELEMENT */}
+            {/* Kept 1px size and opacity 0 to maintain video processing without visible ghosting */}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              onLoadedData={() => {
+                console.log("Webcam data loaded - Removing Skeleton");
+                setIsStreamReady(true);
+              }}
+              className="absolute top-0 left-0 -z-50 w-px h-px opacity-0 pointer-events-none"
+            />
+            <canvas ref={canvasRef} style={{ display: "none" }} />
+          </>
+        )}
+      </div>
     </div>
   );
 };
