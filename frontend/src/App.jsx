@@ -5,8 +5,8 @@ import NavBar from "./components/NavBar";
 import LiveFeed from "./components/LiveFeed";
 import LiveChat from "./components/LiveChat";
 import Footer from "./components/Footer";
-import Team from "./components/Team"; // create this file
-// If you don't have About.jsx yet, you can use a placeholder
+import Team from "./components/Team";
+import About from "./components/About";   // ✅ IMPORTANT: Import About
 
 const App = () => {
   const [activePanel, setActivePanel] = useState("live");
@@ -18,8 +18,9 @@ const App = () => {
 
       {/* MAIN CONTENT AREA */}
       <div className="w-full max-w-7xl flex flex-1 justify-center items-center px-6">
-        {/* ACTIVATE ANIMATION WHEN SWITCHING PANELS */}
         <AnimatePresence mode="wait">
+
+          {/* LIVE PANEL */}
           {activePanel === "live" && (
             <motion.div
               key="live"
@@ -34,6 +35,7 @@ const App = () => {
             </motion.div>
           )}
 
+          {/* TEAM PANEL */}
           {activePanel === "team" && (
             <motion.div
               key="team"
@@ -47,6 +49,7 @@ const App = () => {
             </motion.div>
           )}
 
+          {/* ABOUT PANEL — UPDATED */}
           {activePanel === "about" && (
             <motion.div
               key="about"
@@ -54,11 +57,12 @@ const App = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.25 }}
-              className="w-full text-center text-white text-xl"
+              className="w-full text-white"
             >
-              <p>About Page Coming Soon...</p>
+              <About />   {/* ✅ Use your actual About page */}
             </motion.div>
           )}
+
         </AnimatePresence>
       </div>
 
