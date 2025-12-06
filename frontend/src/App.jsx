@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import useThemeStore from "./stores/useThemeStore";
 
 import NavBar from "./components/NavBar";
 import LiveFeed from "./components/LiveFeed";
@@ -11,6 +12,12 @@ import LiveMetrics from "./components/LiveMetrics";
 
 const App = () => {
   const [activePanel, setActivePanel] = useState("live");
+
+  const { theme } = useThemeStore();
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-base-100">
@@ -34,7 +41,7 @@ const App = () => {
               {/* Live Feed Header */}
               <div className="flex items-center gap-3">
                 <div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,99,71,0.5)]"></div>
-                <h2 className="text-3xl font-bold text-white font-poppins tracking-wide">
+                <h2 className="text-3xl font-bold text-base-content font-poppins tracking-wide">
                   Live Dashboard
                 </h2>
               </div>
@@ -48,7 +55,7 @@ const App = () => {
               {/* Metrics Header */}
               <div className="flex items-center gap-3">
                 <div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,99,71,0.5)]"></div>
-                <h2 className="text-3xl font-bold text-white font-poppins tracking-wide">
+                <h2 className="text-3xl font-bold text-base-content font-poppins tracking-wide">
                   Live Metrics
                 </h2>
               </div>

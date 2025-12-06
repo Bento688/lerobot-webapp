@@ -71,7 +71,7 @@
   /* Tomato Color #FF6347 converted to oklch */
   --color-primary: oklch(65.5% 0.236 26.68);
   /* Deep Dark Backgrounds */
-  --color-base-100: oklch(20% 0.02 260); /* ~Zinc 800 */
-  --color-base-200: oklch(17% 0.02 260); /* ~Zinc 900 */
-  --color-base-300: oklch(15% 0.02 260); /* ~Zinc 950 */
+  /* --color-base-100: oklch(20% 0.02 260); /* ~Zinc 800 */
+  /* --color-base-200: oklch(17% 0.02 260); /* ~Zinc 900 */
+  /* --color-base-300: oklch(15% 0.02 260); ~Zinc 950 */
 }

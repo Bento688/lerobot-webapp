@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 
 const About = () => {
   return (
-    <div className="text-white px-6 py-12 max-w-4xl mx-auto space-y-16">
+    <div className="text-base-content px-6 py-12 max-w-4xl mx-auto space-y-16">
       {/* HEADER SECTION */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
@@ -13,7 +13,7 @@ const About = () => {
         className="text-center space-y-3"
       >
         <h1 className="text-5xl font-poppins font-bold">About TomaTVLA</h1>
-        <p className="text-gray-300 text-lg">
+        <p className="text-base-content/60 text-lg">
           A modern AI-powered dashboard for controlling the LeRobot So101
           robotic arm.
         </p>
@@ -31,7 +31,7 @@ const About = () => {
           <div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,99,71,0.5)]"></div>
           <h2 className="text-3xl font-poppins font-semibold">Overview</h2>
         </div>
-        <p className="text-gray-300 leading-relaxed">
+        <p className="text-base-content/60 leading-relaxed">
           TomaTVLA is an interactive control platform designed to operate the
           LeRobot So101 robotic arm. Rather than managing multiple terminal
           windows, configuring hardware connections, or writing low-level
@@ -70,7 +70,7 @@ const About = () => {
             What Is the LeRobot So101 Arm?
           </h2>
         </div>
-        <p className="text-gray-300 leading-relaxed">
+        <p className="text-base-content/60 leading-relaxed">
           The LeRobot So101 is an accessible 6-axis robotic arm created to
           demonstrate modern robotics workflows, including imitation learning,
           policy-based control, and real-time visual decision-making. Built with
@@ -78,7 +78,7 @@ const About = () => {
           responsive servo architecture and a wrist-mounted camera that enables
           real-time task observation and manipulation.
         </p>
-        <p className="text-gray-300 leading-relaxed">
+        <p className="text-base-content/60 leading-relaxed">
           Its API-first design allows developers to control the robot using
           Python, ROS, or any backend capable of generating movement
           instructions. This makes the So101 an ideal platform for prototyping
@@ -101,14 +101,14 @@ const About = () => {
             How the TomaTVLA Platform Works
           </h2>
         </div>
-        <p className="text-gray-300 leading-relaxed">
+        <p className="text-base-content/60 leading-relaxed">
           The core mission of this platform is to simplify the robotics
           workflow. Instead of manually opening terminals and executing raw
           scripts, users can operate the robot through intuitive,
           natural-language dialogue interpreted by an AI assistant.
         </p>
 
-        <ul className="list-disc ml-6 text-gray-300 space-y-2">
+        <ul className="list-disc ml-6 text-base-content/60 space-y-2">
           <li>You enter a text prompt describing what the robot should do.</li>
           <li>
             The AI interprets the request and generates structured robot
@@ -124,7 +124,7 @@ const About = () => {
           </li>
         </ul>
 
-        <p className="text-gray-300 leading-relaxed">
+        <p className="text-base-content/60 leading-relaxed">
           This architecture allows remote control, modular experimentation, and
           a cleaner workflow that removes the complexity often associated with
           robotics development.
@@ -145,14 +145,14 @@ const About = () => {
             Live Wrist-Camera Feed
           </h2>
         </div>
-        <p className="text-gray-300 leading-relaxed">
+        <p className="text-base-content/60 leading-relaxed">
           The LiveFeed panel streams video directly from the robot’s wrist
           camera, providing a first-person perspective of what the robot sees.
           This visual feedback is crucial for object manipulation, precision
           tasks, and ensuring correct execution.
         </p>
 
-        <p className="text-gray-300 leading-relaxed">
+        <p className="text-base-content/60 leading-relaxed">
           In addition, a YOLO-based detection model processes incoming frames to
           identify objects and highlight them with bounding boxes. This enables
           real-time perception-driven actions and future expansion into
@@ -185,7 +185,7 @@ const About = () => {
           <div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,99,71,0.5)]"></div>
           <h2 className="text-3xl font-poppins font-semibold">Our Mission</h2>
         </div>
-        <p className="text-gray-300 leading-relaxed">
+        <p className="text-base-content/60 leading-relaxed">
           TomaTVLA aims to redefine accessibility in robotics by providing a
           user-centric platform where natural interaction, real-time feedback,
           and machine intelligence converge. This project highlights how

@@ -8,7 +8,7 @@ export default function Team() {
   ];
 
   return (
-    <div className="text-white font-poppins w-full flex flex-col items-center py-10">
+    <div className="text-base-content font-poppins w-full flex flex-col items-center py-10">
       <h1 className="text-4xl font-bold mb-10">Our Team</h1>
 
       {/* Circle layout */}
