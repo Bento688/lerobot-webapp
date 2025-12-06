@@ -17,14 +17,14 @@ const MessageInput = () => {
 
   return (
     // border-base-300 replaces border-zinc-700
-    <div className="p-4 w-full bg-base-100 border-t border-base-300">
+    <div className="p-4 w-full bg-base-200 border-t border-base-300">
       <form onSubmit={handleSendMessage} className="flex items-center gap-2">
         <input
           type="text"
           // DaisyUI 'input' class handles everything.
           // input-bordered adds the border.
           // w-full makes it expand.
-          className="input input-bordered w-full bg-base-200 font-poppins focus:outline-none focus:border-primary"
+          className="input input-bordered w-full bg-base-100 font-poppins focus:outline-none focus:border-primary"
           placeholder="Type a message..."
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -37,7 +37,7 @@ const MessageInput = () => {
           disabled={isLoading || text === ""}
           className={`btn btn-circle ${
             isLoading || text === ""
-              ? "btn-disabled bg-base-300"
+              ? "btn-disabled bg-base-300 text-base-100"
               : "btn-primary text-primary-content"
           }`}
         >

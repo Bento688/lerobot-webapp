@@ -20,12 +20,12 @@ const LiveChat = () => {
   return (
     // NOTE: Removed sizing/styling classes here as they should be in the parent (App.jsx)
     // For now, keeping your sizing classes to make it work standalone:
-    <div className="w-full h-full min-h-[500px] max-h-[500px] bg-zinc-800 rounded-xl shadow-lg md:w-1/3 flex flex-col border border-gray-800 overflow-hidden">
+    <div className="w-full h-full min-h-[500px] max-h-[500px] bg-base-100 rounded-xl shadow-lg md:w-1/3 flex flex-col border border-base-300 overflow-hidden">
       <ChatHeader />
 
-      <div className="flex-1 overflow-y-auto bg-base-100 p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto bg-base-200 p-4 space-y-4">
         {messages.length === 0 && (
-          <div className="flex justify-center align-center font-poppins text-zinc-500 text-sm mt-10">
+          <div className="flex justify-center align-center font-poppins text-zinc-500 text-md mt-10">
             <p>Say hello to the robot! 👋</p>
           </div>
         )}

@@ -16,7 +16,7 @@ export default function Team() {
         {members.map((m) => (
           <div key={m.name} className="flex flex-col items-center">
             {/* Circle border */}
-            <div className="w-50 h-50 rounded-full border-4 border-gray-400 flex items-center justify-center overflow-hidden">
+            <div className="w-50 h-50 rounded-full border-2 border-primary/75 flex items-center justify-center overflow-hidden">
               {/* Placeholder for image */}
               <img src={m.img} alt={m.name} />
               <div className="w-full h-full bg-zinc-600"></div>

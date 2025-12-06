@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2 } from "lucide-react"; // Optional: for a nice spinner if you have lucide
+import { Ban, Loader2 } from "lucide-react"; // Optional: for a nice spinner if you have lucide
 
 const WEBSOCKET_URL = "ws://localhost:3000/ws/process_video";
 const STREAM_URL = "http://localhost:3000/video_feed";
@@ -137,14 +137,13 @@ const LiveFeed = () => {
     <div className="w-full relative rounded-2xl border border-base-300 bg-base-100 shadow-[0_15px_50px_rgba(0,0,0,0.6)] overflow-hidden aspect-video">
       {/* 1. SKELETON LOADER (Shows while waiting for camera, hidden on error) */}
       {!isStreamReady && !permissionError && (
-        <div className="absolute inset-0 z-20 flex flex-col gap-4 p-4 bg-base-100">
+        <div className="absolute inset-0 z-30 flex flex-col gap-4 bg-base-100">
           {/* Main block */}
           <div className="skeleton h-full w-full rounded-xl bg-base-300 opacity-50"></div>
 
           {/* Fake UI elements to look nice */}
-          <div className="absolute top-8 left-8 flex gap-3">
-            <div className="skeleton h-8 w-8 rounded-full bg-base-300 opacity-60"></div>
-            <div className="skeleton h-8 w-24 rounded-lg bg-base-300 opacity-60"></div>
+          <div className="absolute top-4 left-4 flex gap-3">
+            <div className="skeleton h-[26px] w-[99.75px] rounded-lg bg-base-300 opacity-60"></div>
           </div>
 
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-base-content/40 font-poppins text-sm animate-pulse">
@@ -158,12 +157,14 @@ const LiveFeed = () => {
 
       {/* 2. PERMISSION ERROR (Shows if camera denied) */}
       {permissionError && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-base-100 p-6 text-center">
-          <div className="text-4xl mb-4">🚫</div>
-          <h3 className="text-error font-bold text-xl mb-2">
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-base-200 p-6 text-center">
+          <div className="text-4xl mb-4">
+            <Ban size={40} strokeWidth={3} className="text-primary" />
+          </div>
+          <h3 className="text-primary font-poppins font-bold text-xl mb-2">
             Camera Access Denied
           </h3>
-          <p className="text-base-content/70 text-sm max-w-xs">
+          <p className="text-base-content/40 font-poppins text-sm max-w-xs">
             {serverMessage}
           </p>
         </div>

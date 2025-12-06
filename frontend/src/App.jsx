@@ -6,7 +6,8 @@ import LiveFeed from "./components/LiveFeed";
 import LiveChat from "./components/LiveChat";
 import Footer from "./components/Footer";
 import Team from "./components/Team";
-import About from "./components/About"; // ✅ IMPORTANT: Import About
+import About from "./components/About";
+import LiveMetrics from "./components/LiveMetrics";
 
 const App = () => {
   const [activePanel, setActivePanel] = useState("live");
@@ -27,23 +28,33 @@ const App = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.25 }}
-              // 1. Change outer wrapper to always be a vertical column
-              className="w-full flex flex-col gap-6"
+              // Flex container for "live" page items
+              className="w-full flex flex-col gap-8"
             >
-              {/* 2. Your New Header */}
+              {/* Live Feed Header */}
               <div className="flex items-center gap-3">
-                {/* Optional: Decorative pill to match your theme */}
                 <div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,99,71,0.5)]"></div>
                 <h2 className="text-3xl font-bold text-white font-poppins tracking-wide">
                   Live Dashboard
                 </h2>
               </div>
 
-              {/* 3. Inner Container: Handles the side-by-side layout for Feed & Chat */}
+              {/* Container for livefeed and livechat */}
               <div className="flex flex-col md:flex-row items-stretch gap-10">
                 <LiveFeed />
                 <LiveChat />
               </div>
+
+              {/* Metrics Header */}
+              <div className="flex items-center gap-3">
+                <div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,99,71,0.5)]"></div>
+                <h2 className="text-3xl font-bold text-white font-poppins tracking-wide">
+                  Live Metrics
+                </h2>
+              </div>
+
+              {/* todo: LiveMetrics.jsx */}
+              <LiveMetrics />
             </motion.div>
           )}
 
@@ -61,7 +72,7 @@ const App = () => {
             </motion.div>
           )}
 
-          {/* ABOUT PANEL — UPDATED */}
+          {/* ABOUT PANEL */}
           {activePanel === "about" && (
             <motion.div
               key="about"
@@ -71,7 +82,7 @@ const App = () => {
               transition={{ duration: 0.25 }}
               className="w-full text-white"
             >
-              <About /> {/* ✅ Use your actual About page */}
+              <About />
             </motion.div>
           )}
         </AnimatePresence>

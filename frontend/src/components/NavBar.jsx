@@ -49,7 +49,7 @@ const NavBar = ({ setActivePanel }) => {
   return (
     // bg-base-100 = Card/Nav background (was zinc-800)
     // border-base-300 = Separator (was zinc-700)
-    <div className="flex mx-auto justify-between w-full p-4 bg-base-100 border-b border-base-300 select-none relative items-center sticky top-0 z-50">
+    <div className="flex mx-auto justify-between w-full p-4 bg-base-100 border-b border-base-300 select-none relative items-center top-0 z-50">
       <h3 className="font-medium text-3xl font-poppins text-base-content flex items-center gap-2">
         <TomatoIcon className={"w-10 h-10 text-primary"} />
         TomaTVLA
