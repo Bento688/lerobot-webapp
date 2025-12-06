@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 
 const About = () => {
   return (
-    <div className="text-base-content px-6 py-12 max-w-4xl mx-auto space-y-16">
+    <div className="text-base-content px-6 max-w-4xl mx-auto space-y-16">
       {/* HEADER SECTION */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}

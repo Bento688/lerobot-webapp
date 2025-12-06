@@ -25,7 +25,7 @@ const App = () => {
       <NavBar setActivePanel={setActivePanel} />
 
       {/* MAIN CONTENT AREA */}
-      <div className="w-full max-w-7xl flex flex-1 justify-center items-center px-6">
+      <div className="w-full max-w-7xl flex flex-1 justify-center items-center px-6 py-12">
         <AnimatePresence mode="wait">
           {/* LIVE PANEL */}
           {activePanel === "live" && (
