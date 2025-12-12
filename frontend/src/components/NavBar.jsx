@@ -63,7 +63,7 @@ const NavBar = ({ setActivePanel }) => {
 
       <div className="flex gap-5 items-center">
         {/* Theme controller */}
-        <label className="toggle text-base-content">
+        <label className="toggle text-base-content/70">
           <input
             type="checkbox"
             value="winter"

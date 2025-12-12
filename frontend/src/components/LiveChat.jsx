@@ -63,7 +63,7 @@ const LiveChat = () => {
       {/* Attach ref here */}
       <div
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto bg-base-200 p-4 space-y-4"
+        className="flex-1 overflow-y-auto bg-base-200 p-6 space-y-4"
       >
         {messages.length === 0 && (
           <div className="flex justify-center align-center font-poppins text-zinc-500 text-md mt-10">
@@ -90,8 +90,8 @@ const LiveChat = () => {
             <div
               className={`chat-bubble font-poppins max-w-[80%] ${
                 msg.role === "user"
-                  ? "chat-bubble-primary"
-                  : "chat-bubble-neutral text-gray-200"
+                  ? "chat-bubble-primary text-white"
+                  : "chat-bubble-neutral text-white"
               }`}
             >
               {msg.content}
