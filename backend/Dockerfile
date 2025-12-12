@@ -1,9 +1,11 @@
 # Use a lightweight Python image
-FROM python:3.10-slim
+# We pin to 'bookworm' to ensure stable Debian packages
+FROM python:3.10-slim-bookworm
 
 # Install system dependencies required for OpenCV (cv2)
+# Updated: 'libgl1' instead of 'libgl1-mesa-glx'
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
