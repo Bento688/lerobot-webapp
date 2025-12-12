@@ -25,7 +25,11 @@ const App = () => {
       <NavBar setActivePanel={setActivePanel} />
 
       {/* MAIN CONTENT AREA */}
-      <div className="w-full max-w-7xl flex flex-1 justify-center items-center px-6 py-12">
+      {/* FIX: 
+         - Changed 'items-center' to 'items-start' to prevent top content clipping on small screens.
+         - Increased 'pt-14' to 'pt-24' to provide enough clearance for the fixed NavBar.
+      */}
+      <div className="w-full max-w-7xl flex flex-1 justify-center items-center px-6 pt-36 pb-10">
         <AnimatePresence mode="wait">
           {/* LIVE PANEL */}
           {activePanel === "live" && (
@@ -60,7 +64,7 @@ const App = () => {
                 </h2>
               </div>
 
-              {/* todo: LiveMetrics.jsx */}
+              {/* LiveMetrics Component */}
               <LiveMetrics />
             </motion.div>
           )}
@@ -73,7 +77,7 @@ const App = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.25 }}
-              className="w-full text-center text-white"
+              className="w-full text-center text-base-content"
             >
               <Team />
             </motion.div>
@@ -87,7 +91,7 @@ const App = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.25 }}
-              className="w-full text-white"
+              className="w-full text-base-content"
             >
               <About />
             </motion.div>
