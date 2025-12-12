@@ -3,7 +3,8 @@ import base64
 import cv2
 import numpy as np
 import uvicorn
-import ollama
+import vertexai
+import os
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
@@ -11,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Literal, Optional
 from pydantic import BaseModel, Field
 from ultralytics import YOLO
+from vertexai.generative_models import GenerativeModel, GenerationConfig
 
 # ==========================================
 # 1. CONFIGURATION & SETUP
@@ -19,11 +21,17 @@ from ultralytics import YOLO
 # Initialize FastAPI
 app = FastAPI()
 
+# Initialize Google Vertex AI
+# Cloud Run automatically provides the project ID, but we must set the region.
+PROJECT_ID = "lerobot-webapp"
+vertexai.init(project=PROJECT_ID, location="us-central1")
+
+# Load the "Newer" Brain: Gemini 1.5 Flash-002
+# You can also try "gemini-2.0-flash-exp" here if you want to live on the edge!
+model = GenerativeModel("gemini-2.5-flash")
+
 # Configure CORS (Allow Frontend Access)
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -50,17 +58,16 @@ Your Logic:
 If the user just says "hello" or asks a question, set `command` to null and just chat.
 """
 
-
 # ==========================================
 # 2. DATA MODELS (PYDANTIC)
 # ==========================================
 
 class RobotControl(BaseModel):
     """
-    Defines the strict structure for Ollama's response.
+    Defines the strict structure for the AI's response.
     """
     chat_reply: str = Field(
-        description="A friendly, conversational response to the user. Do NOT include technical commands here."
+        description="A friendly, conversational response to the user."
     )
     
     command: Optional[Literal[
@@ -68,9 +75,8 @@ class RobotControl(BaseModel):
         "Pick the unripe tomato and put it on the bag"
     ]] = Field(
         default=None, 
-        description="The exact command for the robot arm. Set this ONLY if the user explicitly asks to pick/move a tomato."
+        description="The exact command for the robot arm."
     )
-
 
 # ==========================================
 # 3. GLOBAL STATE & UTILITIES
@@ -82,19 +88,22 @@ yolo_model = None
 def get_yolo_model():
     """
     Loads the YOLO model only when first requested.
-    This prevents the server from hanging during startup.
     """
     global yolo_model
     if yolo_model is None:
         try:
             print("LAZY LOADING: Loading YOLO model 'models/best.pt'...")
-            yolo_model = YOLO("models/best.pt")
-            print("LAZY LOADING: YOLO model loaded successfully.")
+            # Ensure you have a 'models' folder with 'best.pt' inside
+            if os.path.exists("models/best.pt"):
+                yolo_model = YOLO("models/best.pt")
+                print("LAZY LOADING: YOLO model loaded successfully.")
+            else:
+                print("WARNING: 'models/best.pt' not found. YOLO features disabled.")
+                return None
         except Exception as e:
             print(f"Error loading YOLO model: {e}")
             return None
     return yolo_model
-
 
 def data_url_to_frame(data_url: str):
     """Converts a Base64 Data URL (from Frontend) to an OpenCV BGR frame."""
@@ -102,11 +111,10 @@ def data_url_to_frame(data_url: str):
         _, encoded_data = data_url.split(',', 1)
         decoded_data = base64.b64decode(encoded_data)
         np_arr = np.frombuffer(decoded_data, np.uint8)
-        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR) # Returns BGR
+        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR) 
         return frame
     except Exception:
         return None
-
 
 def frame_to_data_url(frame):
     """Converts an OpenCV BGR frame to a Base64 Data URL (for Frontend)."""
@@ -115,48 +123,58 @@ def frame_to_data_url(frame):
     base64_data = base64.b64encode(encodedImage).decode('utf-8')
     return f"data:image/jpeg;base64,{base64_data}"
 
-
 # ==========================================
 # 4. CORE LOGIC (AI BRAIN)
 # ==========================================
 
 async def run_robot_chat_logic(user_message: str):
     """
-    Handles the conversation logic.
-    Uses 'asyncio.to_thread' to prevent Ollama from blocking the video feed.
+    Handles the conversation logic using Vertex AI (Gemini).
     """
     print(f"USER SAYS: '{user_message}'")
     
     try:
-        # Run the blocking Ollama call in a separate thread
-        response = await asyncio.to_thread(
-            ollama.chat,
-            model='qwen3-vl:4b', # Make sure you have pulled this model
-            messages=[
-                {'role': 'system', 'content': SYSTEM_PROMPT},
-                {'role': 'user', 'content': user_message}
-            ],
-            format=RobotControl.model_json_schema(), 
-            options={'temperature': 0} # Deterministic output
+        # Construct the full prompt
+        prompt = f"""
+        {SYSTEM_PROMPT}
+        
+        USER MESSAGE: {user_message}
+        """
+
+        # Call Gemini Asynchronously
+        # We enforce JSON response type for reliability
+        response = await model.generate_content_async(
+            prompt,
+            generation_config=GenerationConfig(
+                response_mime_type="application/json",
+                temperature=0.1
+            )
         )
         
-        # Parse the structured response
-        ai_result = RobotControl.model_validate_json(response.message.content)
+        # Parse the JSON string from Gemini into our Pydantic model
+        response_text = response.text
+        ai_result = RobotControl.model_validate_json(response_text)
         
         # Debug Logs
         print(f"AI REPLY:   {ai_result.chat_reply}")
         if ai_result.command:
             print(f"AI COMMAND: {ai_result.command}")
-            print(f"🤖 SENDING COMMAND TO ROBOT: {ai_result.command}")
             # TODO: Add your actual robot control code here
-            # e.g., await smolvla_controller.execute(ai_result.command)
             
         return ai_result.chat_reply
 
     except Exception as e:
-        print(f"Ollama Error: {e}")
-        return "I'm having trouble connecting to my brain. Is Ollama running?"
-
+        error_msg = str(e)
+        print(f"Vertex AI Error: {error_msg}")
+        
+        # Check for common specific errors to give a better hint
+        if "403" in error_msg:
+            return f"Error: Permission Denied (403). Did you enable the Vertex AI API in Cloud Console? Or is the Project ID '{PROJECT_ID}' incorrect?"
+        if "404" in error_msg:
+             return f"Error: Not Found (404). The model 'gemini-2.5-flash' might not be available in us-central1 yet, or the Project ID '{PROJECT_ID}' is wrong."
+             
+        # Fallback to showing the raw error
+        return f"Cloud Brain Error: {error_msg}"
 
 # ==========================================
 # 5. API ENDPOINTS
@@ -164,8 +182,7 @@ async def run_robot_chat_logic(user_message: str):
 
 @app.get("/")
 def read_root():
-    return {"message": "Robot Backend is Live!"}
-
+    return {"message": "Robot Backend is Live (Vertex AI Edition)!"}
 
 # --- CHAT WEBSOCKET ---
 @app.websocket("/ws")
@@ -188,47 +205,41 @@ async def websocket_chat(websocket: WebSocket):
     except Exception as e:
         print(f"Error in Chat WebSocket: {e}")
 
-
 # --- YOLO PROCESSING WEBSOCKET (PLAN C) ---
 @app.websocket("/ws/process_video")
 async def websocket_video_process(websocket: WebSocket):
     await websocket.accept()
     print("CLIENT: Connected to Video Processing.")
     
-    # Load model on first connection
     local_model = get_yolo_model()
     if local_model is None:
-        await websocket.send_text("Error: YOLO model failed to load.")
-        await websocket.close()
-        return
+        await websocket.send_text("Error: YOLO model failed to load (Check logs).")
+        # We don't close immediately so the frontend doesn't crash, 
+        # but we won't process anything.
     
     try:
         while True:
-            # 1. Receive Frame (Base64)
             data_url = await websocket.receive_text()
-            frame = data_url_to_frame(data_url) # BGR Frame
             
-            if frame is not None:
-                # 2. Run YOLO (Pass Raw BGR Frame)
-                # conf=0.5 filters out weak detections
-                results = local_model(frame, verbose=False, conf=0.85)
-                
-                # 3. Draw Boxes (Returns BGR Image)
-                processed_frame = results[0].plot()
-                
-                # 4. Send Back (Base64)
-                processed_data_url = frame_to_data_url(processed_frame)
-                if processed_data_url:
-                    await websocket.send_text(processed_data_url)
+            if local_model:
+                frame = data_url_to_frame(data_url)
+                if frame is not None:
+                    # Run YOLO
+                    results = local_model(frame, verbose=False, conf=0.85)
+                    processed_frame = results[0].plot()
+                    
+                    # Send Back
+                    processed_data_url = frame_to_data_url(processed_frame)
+                    if processed_data_url:
+                        await websocket.send_text(processed_data_url)
             
-            # Yield control to allow other tasks (like chat) to run
+            # IMPORTANT: Lower CPU usage by yielding control
             await asyncio.sleep(0.01)
             
     except WebSocketDisconnect:
         print("CLIENT: Disconnected from Video.")
     except Exception as e:
         print(f"Error processing video: {e}")
-
 
 # --- SIMPLE VIDEO FEED (PLAN B) ---
 async def video_generator():
@@ -252,12 +263,10 @@ async def video_generator():
 def video_feed():
     return StreamingResponse(video_generator(), media_type="multipart/x-mixed-replace; boundary=frame")
 
-
 # ==========================================
 # 6. APP ENTRY POINT
 # ==========================================
 
 if __name__ == "__main__":
     print("Starting FastAPI server on http://127.0.0.1:3000")
-    # Run directly for best stability
     uvicorn.run("main:app", host="127.0.0.1", port=3000, reload=True)

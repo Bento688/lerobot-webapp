@@ -1,24 +1,79 @@
-# Node.js
-frontend/node_modules
-frontend/build
+==========================================
+
+1. DEPENDENCIES & ENVIRONMENTS
+
+==========================================
+
+node_modules/
+frontend/node_modules/
 backend/node_modules/
 
-# Python
+Python Virtual Environments
+
 backend/venv/
-backend/__pycache__/
+backend/env/
+.venv/
+env/
+
+==========================================
+
+2. BUILD OUTPUTS
+
+==========================================
+
+Frontend (Vite/React)
+
+frontend/dist/
+frontend/dist-ssr/
+frontend/build/
+frontend/*.local
+
+Backend (Python)
+
+backend/pycache/
 *.pyc
 
-# Model files (using Git LFS is better, but ignoring is safest for now)
-*.pt
+==========================================
 
-# VS Code
-.vscode/
+3. ENVIRONMENT VARIABLES (CRITICAL)
 
-# OS files
-.DS_Store
-Thumbs.db
+==========================================
 
-# Environment variables (never upload secrets)
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 frontend/.env
 backend/.env
+
+==========================================
+
+4. OS & EDITOR FILES
+
+==========================================
+
+.DS_Store
+Thumbs.db
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.suo
+.ntvs
+*.njsproj
+*.sln
+
+==========================================
+
+5. LOGS
+
+==========================================
+
+logs
+.log
+npm-debug.log
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
