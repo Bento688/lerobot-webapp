@@ -1,8 +1,21 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Ban, Loader2 } from "lucide-react"; // Optional: for a nice spinner if you have lucide
 
-const WEBSOCKET_URL = "ws://localhost:3000/ws/process_video";
-const STREAM_URL = "http://localhost:3000/video_feed";
+// use env to access backend from google, if it fails, we fallback to localhost.
+const RAW_BACKEND_URL =
+  import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+
+// 1. Remove trailing slash to prevent double slashes (e.g. .app//ws)
+const BACKEND_URL = RAW_BACKEND_URL.replace(/\/$/, "");
+
+// 2. Cloud Run requires secure WebSockets (wss://) if the main URL is https://
+const WEBSOCKET_PROTOCOL = BACKEND_URL.startsWith("https") ? "wss" : "ws";
+
+// 3. Construct WebSocket URL
+const WEBSOCKET_URL = `${BACKEND_URL.replace(
+  /^http(s)?/,
+  WEBSOCKET_PROTOCOL
+)}/ws/process_video`;
 
 const CURRENT_PLAN = "plan_c";
 
@@ -20,9 +33,10 @@ const LiveFeed = () => {
 
   useEffect(() => {
     if (CURRENT_PLAN === "plan_c") {
-      // Store .current in local variables for the cleanup function
       const videoElement = videoRef.current;
       const canvasElement = canvasRef.current;
+
+      console.log(`[LiveFeed] Connecting to WebSocket: ${WEBSOCKET_URL}`);
       const ws = new WebSocket(WEBSOCKET_URL);
       wsRef.current = ws;
 
@@ -36,8 +50,6 @@ const LiveFeed = () => {
           });
           if (videoElement) {
             videoElement.srcObject = stream;
-            // We do NOT set isStreamReady(true) here.
-            // We wait for the video 'onLoadedData' event in the JSX.
           }
           setPermissionError(false);
         } catch (err) {
@@ -52,78 +64,73 @@ const LiveFeed = () => {
       startWebcam();
 
       ws.onopen = () => {
-        console.log("Connected to video processing WebSocket");
-        setServerMessage("Connection established. Starting stream...");
+        console.log("[LiveFeed] Connected to video processing WebSocket");
+        setServerMessage("Connected! Starting stream...");
 
-        // Configuration for throttling
-        const FPS = 15;
+        // REDUCED FPS FOR CLOUD DEPLOYMENT (Saves bandwidth & CPU)
+        const FPS = 5;
         const INTERVAL = 1000 / FPS;
         let lastFrameTime = 0;
 
-        // 1. Consolidated function to capture and send a frame
         const captureAndSendFrame = () => {
-          // Check if WebSocket is open AND video has data
           if (
             ws.readyState === WebSocket.OPEN &&
             videoElement &&
             canvasElement &&
-            videoElement.readyState === 4 // 4 = HAVE_ENOUGH_DATA
+            videoElement.readyState === 4
           ) {
             const context = canvasElement.getContext("2d");
             canvasElement.width = videoElement.videoWidth;
             canvasElement.height = videoElement.videoHeight;
             context.drawImage(videoElement, 0, 0);
 
-            const dataUrl = canvasElement.toDataURL("image/jpeg", 0.8);
+            const dataUrl = canvasElement.toDataURL("image/jpeg", 0.6);
             ws.send(dataUrl);
           }
         };
 
-        // 2. Modern API: Use requestVideoFrameCallback (Preferred)
         if (videoElement && videoElement.requestVideoFrameCallback) {
           const processFrame = (now) => {
             if (now - lastFrameTime >= INTERVAL) {
               captureAndSendFrame();
               lastFrameTime = now;
             }
-
-            // Recursively request the next frame as long as the WebSocket is open
             if (ws.readyState === WebSocket.OPEN) {
               videoElement.requestVideoFrameCallback(processFrame);
             }
           };
-
-          // Start the first callback
           videoElement.requestVideoFrameCallback(processFrame);
         } else {
-          // 3. Fallback: Use setInterval (Older browser/API not available)
-          intervalRef.current = setInterval(captureAndSendFrame, INTERVAL); // Send ~15 FPS
+          intervalRef.current = setInterval(captureAndSendFrame, INTERVAL);
         }
       };
 
       ws.onmessage = (event) => {
-        // Check if the message is an image or an error from Python
         if (event.data.startsWith("data:image/jpeg")) {
           setProcessedFrame(event.data);
         } else {
-          console.error("Backend Error:", event.data);
-          setServerMessage(event.data);
+          // It might be a text message (error or status)
+          console.log("[LiveFeed] Backend Message:", event.data);
+          if (!event.data.startsWith("data:")) {
+            setServerMessage(event.data);
+          }
         }
       };
 
       ws.onerror = (error) => {
-        console.error("WebSocket Error:", error);
-        setServerMessage("WebSocket connection error.");
+        console.error("[LiveFeed] WebSocket Error:", error);
+        setServerMessage("Connection error. Is the backend running?");
       };
 
-      ws.onclose = () => {
-        console.log("Disconnected from video processing WebSocket");
+      ws.onclose = (event) => {
+        console.log(
+          `[LiveFeed] Disconnected. Code: ${event.code}, Reason: ${event.reason}`
+        );
         setServerMessage("Connection closed.");
       };
 
-      // Use local variables in cleanup to avoid ESLint warning
       return () => {
-        console.log("Running cleanup...");
+        console.log("[LiveFeed] Cleanup...");
         clearInterval(intervalRef.current);
         if (ws) ws.close();
         if (videoElement && videoElement.srcObject) {
@@ -131,21 +138,13 @@ const LiveFeed = () => {
         }
       };
     }
-  }, []); // Empty array ensures this runs only once
+  }, []);
 
   return (
     <div className="w-full relative rounded-2xl border border-base-300 bg-base-100 shadow-[0_15px_50px_rgba(0,0,0,0.6)] overflow-hidden aspect-video">
-      {/* 1. SKELETON LOADER (Shows while waiting for camera, hidden on error) */}
       {!isStreamReady && !permissionError && (
         <div className="absolute inset-0 z-30 flex flex-col gap-4 bg-base-100">
-          {/* Main block */}
           <div className="skeleton h-full w-full rounded-xl bg-base-300 opacity-50"></div>
-
-          {/* Fake UI elements to look nice */}
-          <div className="absolute top-4 left-4 flex gap-3">
-            <div className="skeleton h-[26px] w-[99.75px] rounded-lg bg-base-300 opacity-60"></div>
-          </div>
-
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-base-content/40 font-poppins text-sm animate-pulse">
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="w-12 h-12 text-primary animate-spin opacity-75" />
@@ -155,7 +154,6 @@ const LiveFeed = () => {
         </div>
       )}
 
-      {/* 2. PERMISSION ERROR (Shows if camera denied) */}
       {permissionError && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-base-200 p-6 text-center">
           <div className="text-4xl mb-4">
@@ -170,7 +168,6 @@ const LiveFeed = () => {
         </div>
       )}
 
-      {/* 3. MAIN CONTENT (Fades in when stream is ready) */}
       <div
         className={`w-full h-full transition-opacity duration-700 ${
           isStreamReady ? "opacity-100" : "opacity-0"
@@ -179,15 +176,12 @@ const LiveFeed = () => {
         {CURRENT_PLAN === "plan_c" && (
           <>
             {processedFrame ? (
-              /* Wrapper for the processed image and the overlay */
               <div className="relative w-full h-full">
                 <img
                   src={processedFrame}
                   alt="Processed feed"
                   className="w-full h-full object-cover rounded-xl"
                 />
-
-                {/* 🔴 Live Feed Indicator */}
                 <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 flex items-center gap-2 pointer-events-none">
                   <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.6)]" />
                   <span className="text-white text-xs font-poppins font-medium tracking-wide">
@@ -196,19 +190,11 @@ const LiveFeed = () => {
                 </div>
               </div>
             ) : (
-              // Loading state AFTER camera is ready but BEFORE first frame arrives
               <div className="w-full h-full flex flex-col items-center justify-center text-base-content/50 gap-3">
-                {/* UPDATED: Swapped DaisyUI spinner for Lucide Loader2 
-                    - 'animate-spin' makes it rotate
-                    - 'text-primary' uses your tomato color
-                */}
                 <Loader2 className="w-12 h-12 text-primary animate-spin" />
                 <span className="text-sm font-poppins">{serverMessage}</span>
               </div>
             )}
-
-            {/* HIDDEN VIDEO ELEMENT */}
-            {/* Kept 1px size and opacity 0 to maintain video processing without visible ghosting */}
             <video
               ref={videoRef}
               autoPlay

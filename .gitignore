@@ -46,6 +46,7 @@ backend/pycache/
 .env.production.local
 frontend/.env
 backend/.env
+frontend/.env.production
 
 ==========================================
 
