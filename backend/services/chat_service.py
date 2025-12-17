@@ -1,17 +1,16 @@
 import vertexai
 from vertexai.generative_models import GenerativeModel, GenerationConfig
 from models.schemas import RobotControl
+from services.robot_connection_manager import manager  # <--- 1. IMPORT THE MANAGER
 
 # Configuration
 PROJECT_ID = "lerobot-webapp"
 LOCATION = "us-central1"
 
 # Initialize Vertex AI
-# Note: Cloud Run usually provides credentials automatically.
-# Local execution requires 'gcloud auth application-default login'
 try:
     vertexai.init(project=PROJECT_ID, location=LOCATION)
-    # Load the "Newer" Brain: Gemini 1.5 Flash-002 or 2.5
+    # Load gemini-2.5-flash
     model = GenerativeModel("gemini-2.5-flash")
     print(f"Vertex AI initialized for project {PROJECT_ID}")
 except Exception as e:
@@ -53,7 +52,6 @@ async def run_robot_chat_logic(user_message: str):
         """
 
         # Call Gemini Asynchronously
-        # We enforce JSON response type for reliability
         response = await model.generate_content_async(
             prompt,
             generation_config=GenerationConfig(
@@ -67,15 +65,23 @@ async def run_robot_chat_logic(user_message: str):
         try:
             ai_result = RobotControl.model_validate_json(response_text)
         except Exception:
-            # Fallback if JSON is malformed
             return "Beep boop. I had trouble formatting my thought. Try again?"
         
         # Debug Logs
         print(f"AI REPLY:   {ai_result.chat_reply}")
+        
+        # 2. SEND COMMAND TO ROBOT
         if ai_result.command:
             print(f"AI COMMAND: {ai_result.command}")
-            # TODO: Add your actual robot control code here
             
+            # Send the command string to the connected robot WebSocket
+            success = await manager.send_command_to_robot(ai_result.command)
+            
+            if not success:
+                print("WARNING: Robot not connected. Command ignored.")
+                # Optional: Append a warning to the chat reply if you want the user to know
+                # ai_result.chat_reply += " (Note: Robot is offline)"
+
         return ai_result.chat_reply
 
     except Exception as e:

@@ -1,23 +1,34 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Ban, Loader2 } from "lucide-react"; // Optional: for a nice spinner if you have lucide
+import { Ban, Loader2 } from "lucide-react";
 
-// use env to access backend from google, if it fails, we fallback to localhost.
+// ==========================================
+// 1. CONFIGURATION
+// ==========================================
+
+// TOGGLE THIS TO SWITCH MODES:
+// "plan_a" = Robot Relay (Production) - Receives stream from Robot
+// "plan_c" = Webcam Dev (Fallback)    - Uses your laptop camera + Backend YOLO
+const CURRENT_PLAN = "plan_a";
+
+// Backend Connection Setup
+// We use the direct access pattern so Vite can statically replace it during build.
+// This prevents "import.meta is not available" warnings in ES2015 targets.
 const RAW_BACKEND_URL =
   import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
-// 1. Remove trailing slash to prevent double slashes (e.g. .app//ws)
 const BACKEND_URL = RAW_BACKEND_URL.replace(/\/$/, "");
-
-// 2. Cloud Run requires secure WebSockets (wss://) if the main URL is https://
 const WEBSOCKET_PROTOCOL = BACKEND_URL.startsWith("https") ? "wss" : "ws";
 
-// 3. Construct WebSocket URL
+// Dynamic Endpoint Selection based on Plan
+const WS_ENDPOINT =
+  CURRENT_PLAN === "plan_a"
+    ? "/ws/robot/control" // Plan A: Connect to Relay
+    : "/ws/process_video"; // Plan C: Connect to YOLO Processor
+
 const WEBSOCKET_URL = `${BACKEND_URL.replace(
   /^http(s)?/,
   WEBSOCKET_PROTOCOL
-)}/ws/process_video`;
-
-const CURRENT_PLAN = "plan_c";
+)}${WS_ENDPOINT}`;
 
 const LiveFeed = () => {
   const [processedFrame, setProcessedFrame] = useState(null);
@@ -31,14 +42,75 @@ const LiveFeed = () => {
   const wsRef = useRef(null);
   const intervalRef = useRef(null);
 
+  // 1. New Ref for the Watchdog Timer
+  const streamTimeoutRef = useRef(null);
+
+  // Clean up Blob URLs to prevent memory leaks (Specific to Plan A)
   useEffect(() => {
+    return () => {
+      if (processedFrame && processedFrame.startsWith("blob:")) {
+        URL.revokeObjectURL(processedFrame);
+      }
+    };
+  }, [processedFrame]);
+
+  useEffect(() => {
+    console.log(`[LiveFeed] Initializing ${CURRENT_PLAN} via ${WEBSOCKET_URL}`);
+    const ws = new WebSocket(WEBSOCKET_URL);
+    wsRef.current = ws;
+
+    // ==========================================
+    // PLAN A: ROBOT STREAM (Relay Mode)
+    // ==========================================
+    if (CURRENT_PLAN === "plan_a") {
+      ws.binaryType = "blob"; // Crucial for receiving video bytes
+
+      ws.onopen = () => {
+        console.log("[LiveFeed] Connected to Robot Relay");
+        setServerMessage("Waiting for robot stream...");
+      };
+
+      ws.onmessage = (event) => {
+        // When we receive a Blob (Binary Image)
+        if (event.data instanceof Blob) {
+          const blobUrl = URL.createObjectURL(event.data);
+          setProcessedFrame((prev) => {
+            // Revoke previous URL to save memory
+            if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+            return blobUrl;
+          });
+
+          if (!isStreamReady) setIsStreamReady(true);
+
+          // 2. WATCHDOG TIMER LOGIC
+          // Clear the previous timer because we just got a frame (Robot is alive!)
+          if (streamTimeoutRef.current) clearTimeout(streamTimeoutRef.current);
+
+          // Set a new timer. If we don't get another frame in 3 seconds, assume disconnected.
+          streamTimeoutRef.current = setTimeout(() => {
+            console.log("[LiveFeed] Stream timed out (Robot stopped sending)");
+            setIsStreamReady(false);
+            setProcessedFrame(null);
+            setServerMessage("Waiting for robot stream...");
+          }, 500);
+        }
+        // Handle text messages (errors/status)
+        else if (typeof event.data === "string") {
+          console.log("[LiveFeed] Server says:", event.data);
+          if (!event.data.startsWith("data:")) {
+            // Ignore if it's accidentally base64
+            setServerMessage(event.data);
+          }
+        }
+      };
+    }
+
+    // ==========================================
+    // PLAN C: WEBCAM DEV (Processor Mode)
+    // ==========================================
     if (CURRENT_PLAN === "plan_c") {
       const videoElement = videoRef.current;
       const canvasElement = canvasRef.current;
-
-      console.log(`[LiveFeed] Connecting to WebSocket: ${WEBSOCKET_URL}`);
-      const ws = new WebSocket(WEBSOCKET_URL);
-      wsRef.current = ws;
 
       let stream = null;
 
@@ -55,19 +127,17 @@ const LiveFeed = () => {
         } catch (err) {
           console.error("Error: Could not access webcam.", err);
           setPermissionError(true);
-          setServerMessage(
-            "Error: Camera permission denied, please refresh the page and try again."
-          );
+          setServerMessage("Error: Camera permission denied.");
         }
       };
 
       startWebcam();
 
       ws.onopen = () => {
-        console.log("[LiveFeed] Connected to video processing WebSocket");
-        setServerMessage("Connected! Starting stream...");
+        console.log("[LiveFeed] Connected to Backend Processor");
+        setServerMessage("Streaming webcam...");
 
-        // REDUCED FPS FOR CLOUD DEPLOYMENT (Saves bandwidth & CPU)
+        // Capture logic
         const FPS = 5;
         const INTERVAL = 1000 / FPS;
         let lastFrameTime = 0;
@@ -106,55 +176,78 @@ const LiveFeed = () => {
       };
 
       ws.onmessage = (event) => {
-        if (event.data.startsWith("data:image/jpeg")) {
+        if (
+          typeof event.data === "string" &&
+          event.data.startsWith("data:image/jpeg")
+        ) {
           setProcessedFrame(event.data);
         } else {
-          // It might be a text message (error or status)
-          console.log("[LiveFeed] Backend Message:", event.data);
-          if (!event.data.startsWith("data:")) {
-            setServerMessage(event.data);
-          }
-        }
-      };
-
-      ws.onerror = (error) => {
-        console.error("[LiveFeed] WebSocket Error:", error);
-        setServerMessage("Connection error. Is the backend running?");
-      };
-
-      ws.onclose = (event) => {
-        console.log(
-          `[LiveFeed] Disconnected. Code: ${event.code}, Reason: ${event.reason}`
-        );
-        setServerMessage("Connection closed.");
-      };
-
-      return () => {
-        console.log("[LiveFeed] Cleanup...");
-        clearInterval(intervalRef.current);
-        if (ws) ws.close();
-        if (videoElement && videoElement.srcObject) {
-          videoElement.srcObject.getTracks().forEach((track) => track.stop());
+          setServerMessage(event.data);
         }
       };
     }
+
+    // ==========================================
+    // COMMON EVENT HANDLERS
+    // ==========================================
+    ws.onerror = (error) => {
+      console.error("[LiveFeed] WebSocket Error:", error);
+      setServerMessage("Connection error. Is the backend running?");
+      // On error, also reset the stream ready state
+      setIsStreamReady(false);
+      setProcessedFrame(null);
+    };
+
+    ws.onclose = (event) => {
+      console.log(`[LiveFeed] Disconnected. Code: ${event.code}`);
+      setServerMessage("Connection closed. Waiting for reconnect...");
+
+      // ✅ RESET STATE ON DISCONNECT
+      setIsStreamReady(false);
+      setProcessedFrame(null);
+    };
+
+    // Cleanup
+    return () => {
+      console.log("[LiveFeed] Cleanup...");
+      clearInterval(intervalRef.current);
+      // 3. Clear the watchdog timer on unmount
+      if (streamTimeoutRef.current) clearTimeout(streamTimeoutRef.current);
+      if (ws) ws.close();
+
+      // Cleanup webcam only if we were using it (Plan C)
+      if (
+        CURRENT_PLAN === "plan_c" &&
+        videoRef.current &&
+        videoRef.current.srcObject
+      ) {
+        videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
+      }
+    };
   }, []);
 
   return (
-    <div className="w-full relative rounded-2xl border border-base-300 bg-base-100 shadow-[0_15px_50px_rgba(0,0,0,0.6)] overflow-hidden aspect-video">
+    <div className="w-full relative rounded-2xl border border-base-300 bg-base-100 overflow-hidden aspect-video">
+      {/* SKELETON LOADING STATE */}
       {!isStreamReady && !permissionError && (
         <div className="absolute inset-0 z-30 flex flex-col gap-4 bg-base-100">
           <div className="skeleton h-full w-full rounded-xl bg-base-300 opacity-50"></div>
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-base-content/40 font-poppins text-sm animate-pulse">
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="w-12 h-12 text-primary animate-spin opacity-75" />
-              Starting Camera...
+              <span>
+                {CURRENT_PLAN === "plan_a"
+                  ? "Waiting for Robot..."
+                  : "Starting Webcam..."}
+              </span>
+              <span className="text-xs opacity-70">{serverMessage}</span>
             </div>
           </div>
         </div>
       )}
 
-      {permissionError && (
+      {/* ERROR STATE (Plan C Only) */}
+      {permissionError && CURRENT_PLAN === "plan_c" && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-base-200 p-6 text-center">
           <div className="text-4xl mb-4">
             <Ban size={40} strokeWidth={3} className="text-primary" />
@@ -168,40 +261,45 @@ const LiveFeed = () => {
         </div>
       )}
 
+      {/* VIDEO DISPLAY AREA */}
       <div
         className={`w-full h-full transition-opacity duration-700 ${
           isStreamReady ? "opacity-100" : "opacity-0"
         }`}
       >
+        {processedFrame ? (
+          <div className="relative w-full h-full">
+            <img
+              src={processedFrame}
+              alt="Live Feed"
+              className="w-full h-full object-cover rounded-xl"
+            />
+            {/* Live Indicator Overlay */}
+            <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 flex items-center gap-2 pointer-events-none">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.6)]" />
+              <span className="text-white text-xs font-poppins font-medium tracking-wide">
+                Live Feed {CURRENT_PLAN === "plan_a" ? "(Robot)" : "(Dev)"}
+              </span>
+            </div>
+          </div>
+        ) : (
+          /* Connecting State (After socket open, before first frame) */
+          <div className="w-full h-full flex flex-col items-center justify-center text-base-content/50 gap-3">
+            <Loader2 className="w-12 h-12 text-primary animate-spin" />
+            <span className="text-sm font-poppins">{serverMessage}</span>
+          </div>
+        )}
+
+        {/* HIDDEN ELEMENTS FOR PLAN C (WEBCAM CAPTURE) */}
         {CURRENT_PLAN === "plan_c" && (
           <>
-            {processedFrame ? (
-              <div className="relative w-full h-full">
-                <img
-                  src={processedFrame}
-                  alt="Processed feed"
-                  className="w-full h-full object-cover rounded-xl"
-                />
-                <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 flex items-center gap-2 pointer-events-none">
-                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.6)]" />
-                  <span className="text-white text-xs font-poppins font-medium tracking-wide">
-                    Live Feed
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-base-content/50 gap-3">
-                <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                <span className="text-sm font-poppins">{serverMessage}</span>
-              </div>
-            )}
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
               onLoadedData={() => {
-                console.log("Webcam data loaded - Removing Skeleton");
+                console.log("[LiveFeed] Webcam loaded");
                 setIsStreamReady(true);
               }}
               className="absolute top-0 left-0 -z-50 w-px h-px opacity-0 pointer-events-none"

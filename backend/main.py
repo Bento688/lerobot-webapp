@@ -1,7 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import chat, video
+from routers import chat, video, robot  # <--- IMPORT ROBOT ROUTER
 
 # Initialize FastAPI
 app = FastAPI(title="TomaTVLA Backend")
@@ -18,8 +18,9 @@ app.add_middleware(
 )
 
 # Connect the routers to the main app
-app.include_router(chat.router, tags=["Chat"])
-app.include_router(video.router, tags=["Video"])
+app.include_router(chat.router, tags=["Chat"]) # Chatbot router
+app.include_router(video.router, tags=["Video"]) # Webcam video router
+app.include_router(robot.router, tags=["Robot Relay"]) # Robot video router
 
 @app.get("/")
 def read_root():
@@ -27,5 +28,4 @@ def read_root():
 
 if __name__ == "__main__":
     print("Starting FastAPI server on http://127.0.0.1:3000")
-    # 'main:app' assumes this file is named main.py
     uvicorn.run("main:app", host="127.0.0.1", port=3000, reload=True)
