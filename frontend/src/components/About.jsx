@@ -131,7 +131,7 @@ const About = () => {
               movements). The crucial part are the cameras strategically placed
               in different points of its surrounding. These are the robot's
               "eyes," giving it a close-up, view of the tomatoes from different
-              perspectives in its surrounding.
+              perspectives around its surrounding.
             </p>
           </div>
 
@@ -185,7 +185,7 @@ const About = () => {
         <p className="text-base-content/70 text-lg">
           This website serves as the <strong>central control panel</strong> and{" "}
           <strong>showcase</strong> for the entire TomaTVLA project. We
-          integrated <strong>Qwen3-VL LLM</strong> as our Chat-bot to assist
+          integrated <strong>Gemini 2.5 flash</strong> as our Chat-bot to assist
           users in controlling the robot, removing complicated computer code and
           making the entire process more user-friendly.
         </p>
@@ -215,8 +215,8 @@ const About = () => {
             <Camera className="w-8 h-8 mx-auto text-primary" />
             <h3 className="font-bold text-xl mt-2">2. Live Visual</h3>
             <p className="text-sm text-base-content/60 mt-1">
-              The Live Feed shows the YOLO model recognizing the target (red
-              box).
+              The Live Feed shows the YOLO and SmolVLA recognizing the target
+              (red box).
             </p>
           </div>
 
@@ -260,29 +260,36 @@ const About = () => {
 
         <ul className="space-y-4 list-disc list-inside text-base-content/70 text-lg ml-4">
           <li>
-            <strong>1. You Talk (Qwen3-VL Chatbot):</strong> You type a message,
-            it could be anything, from specific prompts such as{" "}
+            <strong>1. You Talk (Gemini 2.5 flash Chatbot):</strong> You type a
+            message, it could be anything, from specific prompts such as{" "}
             <strong>“Move the arm to the ripe tomato.”</strong> or even vague
             instructions like{" "}
             <strong>"Is that a red tomato there? I want that!".</strong> The
-            Qwen3-VL Chatbot then <strong>generalizes</strong> the user's prompt
-            into a binary option: "Pick the ripe tomato and put it in the bag"
-            or "Pick the unripe tomato and put it in the bag" and sends it to
-            the robot through the backend.
+            Gemini 2.5 flash Chatbot then <strong>generalizes</strong> the
+            user's prompt into a binary option: "Pick the ripe tomato and put it
+            in the bag" or "Pick the unripe tomato and put it in the bag" and
+            sends it to the robot through the backend using real-time
+            websockets.
           </li>
           <li>
-            <strong>2. AI Thinks (SmolVLA + YOLO):</strong> Your intent is sent
-            to a powerful backend server. This server combines your instruction
-            with the information from the <strong>YOLO model</strong> (which
-            says, "The ripe tomato is at X, Y, Z coordinates"), then feeds it
-            into the <strong>SmolVLA model</strong>. It then calculates the
-            precise, necessary actions for the arm to follow.
+            <strong>2. AI Thinks (SmolVLA + YOLO):</strong> Following the
+            generalized command sent by the Gemini chatbot,{" "}
+            <strong>
+              the Web App's backend then transmits the command to the SmolVLA
+              robot's backend through real-time WebSockets.
+            </strong>{" "}
+            After receiving the command from the Web App, the
+            constantly-listening robot's backend then initiates its action
+            pipeline to calculate the precise, necessary actions for the arm to
+            follow.
           </li>
           <li>
-            <strong>3. Robot Moves (The So101 Arm):</strong> The precise path is
-            sent directly to the LeRobot SO101's control board. The robot arm
-            then executes the calculated movements, successfully picking up the
-            correct tomato!
+            <strong>3. Robot Moves (The So101 Arm):</strong> After the
+            calculation made by SmolVLA and YOLO model, the{" "}
+            <strong>Action Expert then generates action chunks </strong>for the
+            robot to run asynchronously. The robot arm then executes the action
+            chunks while simultaneously streaming its frames to the WebApp for
+            you to see the live action!
           </li>
         </ul>
       </motion.section>

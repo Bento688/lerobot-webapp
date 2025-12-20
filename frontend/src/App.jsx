@@ -49,14 +49,12 @@ const App = () => {
                   Live Dashboard
                 </h2>
               </div>
-
               {/* Container for livefeed and livechat */}
               <div className="flex flex-col md:flex-row items-stretch gap-10">
                 <LiveFeed />
                 <LiveChat />
               </div>
-
-              {/* Metrics Header */}
+              {/* Metrics Header
               <div className="flex items-center gap-3">
                 <div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,99,71,0.5)]"></div>
                 <h2 className="text-3xl font-bold text-base-content font-poppins tracking-wide">
@@ -65,7 +63,7 @@ const App = () => {
               </div>
 
               {/* LiveMetrics Component */}
-              <LiveMetrics />
+              {/* <LiveMetrics /> */}
             </motion.div>
           )}
 
