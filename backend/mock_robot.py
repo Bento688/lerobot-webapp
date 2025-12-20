@@ -14,9 +14,9 @@ import json # Added for parsing potential JSON commands
 # ==============================================================================
 
 # Configuration
-# TODO: Replace with the actual Cloud Run URL (e.g., wss://tomatvla.com/ws/robot/stream)
+# TODO: link cloud run backend =  wss://lerobot-webapp-backend-google-298451363378.us-central1.run.app/ws/robot/stream
 # Ensure the backend endpoint matches '/ws/robot/stream' defined in routers/robot.py
-BACKEND_URL = "ws://127.0.0.1:3000/ws/robot/stream"
+BACKEND_URL = "wss://lerobot-webapp-backend-google-298451363378.us-central1.run.app/ws/robot/stream"
 FPS = 30  # Target framerate for the video stream
 
 async def send_video_stream(websocket):
@@ -29,11 +29,11 @@ async def send_video_stream(websocket):
     # TODO: Initialize Real Camera here
     # cap = cv2.VideoCapture(0) # or Realsense/Wrist Cam SDK
     
-    # Mock Data Setup (Remove this block for real robot)
+    # ----- Mock Data Setup (Remove this block for real robot) ------------#
     width, height = 640, 480
     x, y = width // 2, height // 2
     dx, dy = 5, 5
-    #-----------------------------------------------------------------#
+    #------------- Mock data setup end ------------------------------------#
     
     try:
         while True:
@@ -46,7 +46,7 @@ async def send_video_stream(websocket):
             # success, frame = cap.read()
             # if not success: continue
 
-            # TODO: Run YOLO Inference (Edge Computing)
+            # TODO: Run YOLO Inference (Edge Computing) kalo ada, pokoknya semua logic robotnya lakuinnya di block ini
             # If the robot handles detection, run it here before sending.
             # results = yolo_model(frame)
             # frame = results[0].plot() # Annotate frame with bounding boxes
@@ -103,8 +103,11 @@ async def receive_commands(websocket):
             # This line blocks (waits) until a message arrives.
             # It does NOT stop the video stream because of asyncio concurrency.
             message = await websocket.recv()
+            #### ini prompt yang lu bakalan dapetin
             
             print(f"📩 COMMAND RECEIVED: {message}")
+            
+            # todo: setelah receive command, pake ini sebagai trigger buat robotic arm lu jalan.
             
             # ---------------------------------------------------------
             # STEP B: Parse & Act
