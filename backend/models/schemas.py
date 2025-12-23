@@ -10,8 +10,7 @@ class RobotControl(BaseModel):
     )
     
     command: Optional[Literal[
-        "Pick the ripe tomato and put it on the bag", 
-        "Pick the unripe tomato and put it on the bag"
+        "Pick the ripe tomato and put it on the bag"
     ]] = Field(
         default=None, 
         description="The exact command for the robot arm."
