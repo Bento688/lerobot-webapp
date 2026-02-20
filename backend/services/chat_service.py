@@ -40,18 +40,24 @@ async def run_robot_chat_logic(user_message: str):
     """
     print(f"USER SAYS: '{user_message}'")
     
+    # if there is no model loaded
     if not model:
         return "System Error: Brain not connected (Vertex AI init failed)."
 
+    # else, if model is loaded
     try:
-        # Construct the full prompt
+        # ----------------------------
+        # 1. Construct the full prompt
+        # ----------------------------
         prompt = f"""
         {SYSTEM_PROMPT}
         
         USER MESSAGE: {user_message}
         """
 
-        # Call Gemini Asynchronously
+        # ----------------------------
+        # 2. Call Gemini Asynchronously
+        # ----------------------------
         response = await model.generate_content_async(
             prompt,
             generation_config=GenerationConfig(
@@ -60,21 +66,25 @@ async def run_robot_chat_logic(user_message: str):
             )
         )
         
-        # Parse the JSON string from Gemini into our Pydantic model
+        # ----------------------------
+        # 3. Parse the JSON string from Gemini into our Pydantic model
+        # ----------------------------
         response_text = response.text
         try:
-            ai_result = RobotControl.model_validate_json(response_text)
+            ai_result = RobotControl.model_validate_json(response_text) # validate with out pydantic model
         except Exception:
             return "Beep boop. I had trouble formatting my thought. Try again?"
         
         # Debug Logs
         print(f"AI REPLY:   {ai_result.chat_reply}")
         
-        # 2. SEND COMMAND TO ROBOT
+        # ----------------------------
+        # 4. SEND COMMAND TO ROBOT
+        # ----------------------------
         if ai_result.command:
             print(f"AI COMMAND: {ai_result.command}")
             
-            # Send the command string to the connected robot WebSocket
+            # 4.1 Send the command string to the connected robot WebSocket
             success = await manager.send_command_to_robot(ai_result.command)
             
             if not success:
@@ -82,6 +92,9 @@ async def run_robot_chat_logic(user_message: str):
                 # Optional: Append a warning to the chat reply if you want the user to know
                 # ai_result.chat_reply += " (Note: Robot is offline)"
 
+        # ----------------------------
+        # 5. SEND CHAT REPLY TO FRONTEND
+        # ----------------------------
         return ai_result.chat_reply
 
     except Exception as e:

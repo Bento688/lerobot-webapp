@@ -28,7 +28,7 @@ async def robot_stream_endpoint(websocket: WebSocket):
 
 
 # ==========================================
-# 2. ENDPOINT FOR THE FRONTEND (The Viewer)
+# 2. ENDPOINT FOR THE FRONTEND (LiveFeed.jsx endpoint)
 # ==========================================
 @router.websocket("/ws/robot/control")
 async def frontend_control_endpoint(websocket: WebSocket):
@@ -37,17 +37,10 @@ async def frontend_control_endpoint(websocket: WebSocket):
     
     try:
         while True:
-            # 2. Listen for commands FROM the frontend (e.g. "Grab Tomato")
-            # The frontend sends text/JSON, but receives binary video
-            command_text = await websocket.receive_text()
-            
-            print(f"User sent command: {command_text}")
-            
-            # 3. Forward the command to the Robot
-            success = await manager.send_command_to_robot(command_text)
-            
-            if not success:
-                await websocket.send_text("Error: Robot is not connected.")
+            # since this is for connecting the users only,
+            # we do nothing on this endpoint.
+            async for _ in websocket.iter_text():
+                pass
             
     except WebSocketDisconnect:
         manager.disconnect_user(websocket)

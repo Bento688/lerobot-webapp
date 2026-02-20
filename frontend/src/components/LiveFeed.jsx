@@ -8,7 +8,7 @@ import { Ban, Loader2 } from "lucide-react";
 // TOGGLE THIS TO SWITCH MODES:
 // "plan_a" = Robot Relay (Production) - Receives stream from Robot
 // "plan_c" = Webcam Dev (Fallback)    - Uses your laptop camera + Backend YOLO
-const CURRENT_PLAN = "plan_a";
+const CURRENT_PLAN = "plan_c";
 
 // Backend Connection Setup
 // We use the direct access pattern so Vite can statically replace it during build.
@@ -27,7 +27,7 @@ const WS_ENDPOINT =
 
 const WEBSOCKET_URL = `${BACKEND_URL.replace(
   /^http(s)?/,
-  WEBSOCKET_PROTOCOL
+  WEBSOCKET_PROTOCOL,
 )}${WS_ENDPOINT}`;
 
 const LiveFeed = () => {
@@ -46,13 +46,20 @@ const LiveFeed = () => {
   const streamTimeoutRef = useRef(null);
 
   // Clean up Blob URLs to prevent memory leaks (Specific to Plan A)
+  // 2. Ref to track the current blob URL for cleanup on unmount
+  const currentBlobUrlRef = useRef(null);
+
+  // Cleanup on unmount only (prevents memory leaks when leaving the page)
   useEffect(() => {
     return () => {
-      if (processedFrame && processedFrame.startsWith("blob:")) {
-        URL.revokeObjectURL(processedFrame);
+      if (
+        currentBlobUrlRef.current &&
+        currentBlobUrlRef.current.startsWith("blob:")
+      ) {
+        URL.revokeObjectURL(currentBlobUrlRef.current);
       }
     };
-  }, [processedFrame]);
+  }, []);
 
   useEffect(() => {
     console.log(`[LiveFeed] Initializing ${CURRENT_PLAN} via ${WEBSOCKET_URL}`);
@@ -74,6 +81,10 @@ const LiveFeed = () => {
         // When we receive a Blob (Binary Image)
         if (event.data instanceof Blob) {
           const blobUrl = URL.createObjectURL(event.data);
+
+          // Update ref so we can clean it up if the component unmounts
+          currentBlobUrlRef.current = blobUrl;
+
           setProcessedFrame((prev) => {
             // Revoke previous URL to save memory
             if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
@@ -86,7 +97,7 @@ const LiveFeed = () => {
           // Clear the previous timer because we just got a frame (Robot is alive!)
           if (streamTimeoutRef.current) clearTimeout(streamTimeoutRef.current);
 
-          // Set a new timer. If we don't get another frame in 3 seconds, assume disconnected.
+          // Set a new timer. If we don't get another frame in 500ms, assume disconnected.
           streamTimeoutRef.current = setTimeout(() => {
             console.log("[LiveFeed] Stream timed out (Robot stopped sending)");
             setIsStreamReady(false);

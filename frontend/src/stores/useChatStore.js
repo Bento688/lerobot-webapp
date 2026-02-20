@@ -10,21 +10,23 @@ const BACKEND_URL = RAW_BACKEND_URL.replace(/\/$/, "");
 // 2. Determine WebSocket Protocol
 const WEBSOCKET_PROTOCOL = BACKEND_URL.startsWith("https") ? "wss" : "ws";
 
-// 3. Construct WebSocket URL
+// 3. Construct WebSocket URL (the final websocket endpoint for chat)
 const WS_URL = `${BACKEND_URL.replace(/^http(s)?/, WEBSOCKET_PROTOCOL)}/ws`;
 
 const useChatStore = create((set, get) => ({
-  messages: [],
+  messages: [], // the messages for the current session
   socket: null,
   isLoading: true,
   isThinking: false,
 
+  // if we receive any type of messages, we put it into the messages array
   addMessage: (role, content) => {
     set((state) => ({
       messages: [...state.messages, { role, content }],
     }));
   },
 
+  // for the chat client to connect with the backend
   connect: () => {
     const { socket } = get();
     // Prevent reconnecting if already connected or connecting
@@ -39,7 +41,9 @@ const useChatStore = create((set, get) => ({
 
     console.log(`[ChatStore] Connecting to WebSocket: ${WS_URL}`);
 
+    // websocket connecting sequence
     try {
+      // creating new websocket
       const newSocket = new WebSocket(WS_URL);
 
       newSocket.onopen = () => {
@@ -54,11 +58,9 @@ const useChatStore = create((set, get) => ({
 
       newSocket.onclose = (event) => {
         console.log(
-          `[ChatStore] Chat Disconnected ❌ Code: ${event.code}, Reason: ${event.reason}`
+          `[ChatStore] Chat Disconnected ❌ Code: ${event.code}, Reason: ${event.reason}`,
         );
         set({ socket: null, isLoading: true, isThinking: false });
-
-        // Optional: Retry logic could go here
       };
 
       newSocket.onerror = (error) => {

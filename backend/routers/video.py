@@ -41,28 +41,3 @@ async def websocket_video_process(websocket: WebSocket):
         print("CLIENT: Disconnected from Video.")
     except Exception as e:
         print(f"Error processing video: {e}")
-
-# --- SIMPLE VIDEO FEED (PLAN B) ---
-async def video_generator():
-    """Reads from the camera and streams MJPEG."""
-    # Try index 1 (External) first, then 0 (Internal)
-    cap = cv2.VideoCapture(1)
-    if not cap.isOpened():
-        cap = cv2.VideoCapture(0)
-        
-    try:
-        while True:
-            success, frame = cap.read()
-            if not success: break
-            
-            (flag, encodedImage) = cv2.imencode(".jpg", frame)
-            if not flag: continue
-            
-            yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + bytearray(encodedImage) + b'\r\n')
-            await asyncio.sleep(0.03)
-    finally:
-        cap.release()
-
-@router.get("/video_feed")
-def video_feed():
-    return StreamingResponse(video_generator(), media_type="multipart/x-mixed-replace; boundary=frame")

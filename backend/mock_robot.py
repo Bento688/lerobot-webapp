@@ -26,13 +26,13 @@ async def send_video_stream(websocket):
     """
     print("🎥 VIDEO TASK: Starting stream...")
     
-    # TODO: Initialize Real Camera here
-    # cap = cv2.VideoCapture(0) # or Realsense/Wrist Cam SDK
+    # Initialize Real Camera
+    cap = cv2.VideoCapture(0)  # Using webcam index 2
     
     # ----- Mock Data Setup (Remove this block for real robot) ------------#
-    width, height = 640, 480
-    x, y = width // 2, height // 2
-    dx, dy = 5, 5
+    # width, height = 640, 480
+    # x, y = width // 2, height // 2
+    # dx, dy = 5, 5
     #------------- Mock data setup end ------------------------------------#
     
     try:
@@ -42,9 +42,11 @@ async def send_video_stream(websocket):
             # ---------------------------------------------------------
             # STEP A: Capture Frame
             # ---------------------------------------------------------
-            # TODO: Replace with real camera capture
-            # success, frame = cap.read()
-            # if not success: continue
+            # Real camera capture
+            success, frame = cap.read()
+            if not success:
+                print("⚠️  Failed to capture frame from camera")
+                continue
 
             # TODO: Run YOLO Inference (Edge Computing) kalo ada, pokoknya semua logic robotnya lakuinnya di block ini
             # If the robot handles detection, run it here before sending.
@@ -52,14 +54,14 @@ async def send_video_stream(websocket):
             # frame = results[0].plot() # Annotate frame with bounding boxes
             
             # --- MOCK GENERATION START (Delete this block for real robot) ---
-            frame = np.zeros((height, width, 3), dtype=np.uint8)
-            cv2.circle(frame, (x, y), 30, (0, 0, 255), -1) 
-            cv2.putText(frame, f"ROBOT CAM {time.strftime('%H:%M:%S')}", 
-                        (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            # frame = np.zeros((height, width, 3), dtype=np.uint8)
+            # cv2.circle(frame, (x, y), 30, (0, 0, 255), -1) 
+            # cv2.putText(frame, f"ROBOT CAM {time.strftime('%H:%M:%S')}", 
+            #             (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
             # Update simulation physics
-            x += dx; y += dy
-            if x <= 30 or x >= width - 30: dx *= -1
-            if y <= 30 or y >= height - 30: dy *= -1
+            # x += dx; y += dy
+            # if x <= 30 or x >= width - 30: dx *= -1
+            # if y <= 30 or y >= height - 30: dy *= -1
             # --- MOCK GENERATION END ---
 
             # ---------------------------------------------------------
@@ -85,9 +87,10 @@ async def send_video_stream(websocket):
             
     except asyncio.CancelledError:
         print("🎥 VIDEO TASK: Stopped.")
-        # TODO: Release camera resources (cap.release())
+        cap.release()  # Release camera resources
     except Exception as e:
         print(f"🎥 VIDEO TASK ERROR: {e}")
+        cap.release()  # Release camera resources on error
 
 async def receive_commands(websocket):
     """
